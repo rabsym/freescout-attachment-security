@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 768 768" preserveAspectRatio="xMidYMid meet">
+  <rect x="0" y="0" width="768" height="768" fill="#2C5F6F" />
+  <circle cx="384" cy="235" r="175" fill="#4A90A4" />
+  <path d="M 384 135 L 300 175 L 300 295 C 300 345 335 385 384 405 C 433 385 468 345 468 295 L 468 175 Z" fill="#E74C3C" />
+  <rect x="359" y="275" width="50" height="60" fill="white" rx="5" />
+  <path d="M 359 275 L 359 250 C 359 230 367 218 384 218 C 401 218 409 230 409 250 L 409 275" stroke="white" stroke-width="10" fill="none" stroke-linecap="round" />
+  <g fill="#DDDDDD" font-family="Helvetica, Arial, sans-serif" font-weight="400" text-anchor="middle">
+    <text x="384" y="570" font-size="105">Attachment</text>
+    <text x="384" y="690" font-size="105">Security</text>
+  </g>
+</svg>
