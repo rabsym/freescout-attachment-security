@@ -1,5 +1,52 @@
 # Changelog - Attachment Security Module
 
+## [3.1.0] - 2026-02-22
+
+### 🔍 Archive Scanning (NEW)
+
+**Archive Security:**
+- Scan ZIP files for blocked file extensions before allowing download
+- Detects and blocks encrypted/password-protected archives (including nested)
+- Configurable nesting depth (0, 1, or 2 levels) for nested ZIP files
+- Configurable behavior for unreadable/corrupted archives
+
+**Nesting Depth Options:**
+- **0 levels**: Scan main ZIP only, do not scan nested archives
+- **1 level** (recommended, default): Scan main ZIP + ZIPs inside it
+- **2 levels**: Scan main ZIP + ZIPs inside + ZIPs inside those
+
+**Unreadable Archive Handling (NEW):**
+- **Block download** (default): Maximum security - blocks any archive that cannot be scanned
+- **Allow download**: Fail-safe mode - logs error but permits download
+- Covers: corrupted files, invalid formats, read errors
+
+**New Settings:**
+- Archive Scanning toggle (Enabled/Disabled)
+- Maximum nesting depth (0, 1, or 2 levels - default: 1)
+- Unreadable Archives mode (Block/Allow - default: Block)
+- Archive Block Message (for archives containing blocked files)
+- Encrypted Archive Block Message (for password-protected archives)
+- Unreadable Archive Block Message (for corrupted/unreadable archives)
+
+**Enhanced Logging:**
+- `[WARNING] [MIDDLEWARE] ARCHIVE CONTAINS BLOCKED FILES` - Lists all blocked files found
+- `[WARNING] [MIDDLEWARE] ENCRYPTED ARCHIVE BLOCKED` - Password-protected archive
+- `[WARNING] [MIDDLEWARE] UNREADABLE ARCHIVE BLOCKED` - Archive cannot be scanned (Block mode)
+- `[ERROR] [MIDDLEWARE] ARCHIVE SCAN FAILED` - Scanning error (Allow mode enabled)
+- Removed debug logs from ServiceProvider (production-ready)
+- Configuration log includes Archive Scan status
+
+**Technical:**
+- New `ArchiveScanner` service class
+- Only scans ZIP files in this version
+- Respects existing blocking modes (all/regular/disabled)
+- Clean separation: archive scan code doesn't affect existing v3.0.0 functionality
+- Fail-safe design: errors are logged and handled according to configuration
+
+**Future versions:** Support for RAR, 7Z, TAR, GZ formats coming in future releases
+
+---
+
 ## [3.0.0] - 2026-02-16
 
 ### 🎨 Customizable Blocked Page
@@ -74,7 +121,7 @@
 
 ```bash
 cd /var/www/html/Modules
-tar -xzf AttachmentSecurity_v3.0.0.tar.gz
+tar -xzf AttachmentSecurity_v3.1.0.tar.gz
 sudo chown -R www-data:www-data AttachmentSecurity
 php artisan cache:clear
 sudo systemctl restart php8.x-fpm

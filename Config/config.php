@@ -4,15 +4,11 @@
  * Attachment Security Module Configuration
  *
  * This configuration file defines default settings for the AttachmentSecurity module.
- * Settings defined here serve as fallbacks when no custom configuration exists in the database.
- *
- * The module reads configuration dynamically from FreeScout's admin panel, allowing
- * administrators to customize settings without modifying code. Changes made through
- * the admin interface take effect immediately without requiring cache clearing.
+ * These values are used as fallbacks when no custom configuration exists in the database.
  *
  * @package Modules\AttachmentSecurity
  * @author  Raimundo Alba
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 return [
@@ -22,69 +18,73 @@ return [
     | Blocked File Extensions
     |--------------------------------------------------------------------------
     |
-    | List of file extensions that will be blocked from attachment downloads.
-    | Administrators can modify this list through the FreeScout settings interface.
-    |
-    | Format: Comma-separated string (e.g., 'exe,php,bat') or array
-    | Example: ['exe', 'php', 'bat', 'cmd']
-    |
-    | Default extensions blocked:
-    | - Executable files: exe, bat, cmd, sh, ps1
-    | - Script files: php, js, vbs, phar
-    | - Web files: htm, html
+    | Default list of file extensions that will be blocked from downloads.
     |
     */
-
-    'blocked_extensions' => Module::getOption(
-        'attachmentsecurity',
-        'blocked_extensions',
-        'exe,php,bat,cmd,htm,html,js,vbs,ps1,sh,phar'
-    ),
+    'blocked_extensions' => 'exe,php,bat,cmd,htm,html,js,vbs,ps1,sh,phar',
 
     /*
     |--------------------------------------------------------------------------
     | Blocking Mode
     |--------------------------------------------------------------------------
     |
-    | Determines who is affected by the attachment blocking rules.
-    |
-    | Available modes:
-    | - 'all':      Block downloads for all users (administrators included)
-    | - 'regular':  Block downloads only for regular users (administrators exempted)
-    | - 'disabled': Disable blocking entirely (all file types allowed)
-    |
-    | Default: 'all' (maximum security)
+    | Who should be affected by the blocking rules.
+    | Options: 'all', 'regular', 'disabled'
     |
     */
-
-    'blocking_mode' => Module::getOption(
-        'attachmentsecurity',
-        'blocking_mode',
-        'all'
-    ),
+    'blocking_mode' => 'all',
 
     /*
     |--------------------------------------------------------------------------
-    | Block Message
+    | Page Title
     |--------------------------------------------------------------------------
     |
-    | Custom message displayed to users when a file download is blocked.
-    | This message appears on a custom blocked page.
-    |
-    | Available variables:
-    | - {filename}  : The name of the blocked file
-    | - {extension} : The file extension (without dot)
-    |
-    | Example: "Cannot download {filename} - .{extension} files are blocked."
-    |
-    | Default: Standard security message in English
+    | Title shown on the blocked page.
     |
     */
+    'page_title' => '🚫 Download Blocked',
 
-    'block_message' => Module::getOption(
-        'attachmentsecurity',
-        'block_message',
-        'For security reasons the file {filename} cannot be downloaded. If you need access to this content, please contact support.'
-    ),
+    /*
+    |--------------------------------------------------------------------------
+    | Background Color
+    |--------------------------------------------------------------------------
+    |
+    | Gradient background colors (comma-separated hex codes).
+    |
+    */
+    'background_color' => '#4A90E2, #5C6AC4',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Block Messages
+    |--------------------------------------------------------------------------
+    |
+    | Messages shown when downloads are blocked.
+    | Available variables: {filename}, {extension}, {blocked_files}
+    |
+    */
+    'block_message' => 'For security reasons the file {filename} cannot be downloaded. If you need access to this content, please contact support.',
+
+    'archive_block_message' => 'The file {filename} contains blocked files: {blocked_files}',
+
+    'encrypted_archive_block_message' => 'The file {filename} is password-protected and cannot be scanned for security reasons.',
+
+    'unreadable_archive_block_message' => 'The file {filename} cannot be scanned because it appears to be corrupted or has an invalid format. For security reasons, the download has been blocked.',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Archive Scanning Settings
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for scanning compressed files.
+    |
+    */
+    'archive_scan_enabled' => false,
+
+    'archive_extensions' => 'zip',
+
+    'max_nesting_depth' => 1,
+
+    'unreadable_archives_mode' => 'block',
 
 ];

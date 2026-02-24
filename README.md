@@ -1,23 +1,24 @@
 # Attachment Security Module for FreeScout
 
-**Version:** 3.0.0  
+**Version:** 3.1.0  
 **Author:** Raimundo Alba  
 **GitHub:** https://github.com/rabsym/freescout-attachment-security  
 **License:** MIT
 
 ## Overview
 
-The Attachment Security module enhances FreeScout's security by blocking downloads of potentially dangerous file attachments based on their file extensions. It provides flexible configuration options including role-based blocking modes, customizable blocked page, and comprehensive logging.
+The Attachment Security module enhances FreeScout's security by blocking downloads of potentially dangerous file attachments based on their file extensions. It provides flexible configuration options including role-based blocking modes, customizable blocked page, comprehensive logging, and **archive scanning with configurable handling of unreadable archives** to detect malicious files hidden inside compressed archives.
 
 ## Features
 
 ### Core Functionality
 - ✅ **Extension-based blocking**: Block downloads by file extension (exe, php, js, etc.)
+- ✅ **Archive scanning** (v3.1.0): Scan ZIP files for hidden malicious content
+- ✅ **Unreadable archive handling** (v3.1.0): Configurable behavior for corrupted/unreadable archives
 - ✅ **Role-based control**: Different blocking modes for administrators vs regular users
 - ✅ **Customizable blocked page**: Page title, message with variables, and gradient colors
 - ✅ **Real-time configuration**: Changes take effect immediately without cache clearing
 - ✅ **Optimized performance**: Only processes attachment requests (storage/*) to minimize overhead
-- ✅ **Optimized architecture**: Refactored codebase with separated concerns (v3.0.0)
 - ✅ **Detailed logging**: All blocked attempts and configuration changes are logged
 - ✅ **User-friendly interface**: Easy-to-use settings page with organized sections
 - ✅ **GitHub integration**: Professional metadata with repository links
@@ -38,6 +39,43 @@ The Attachment Security module enhances FreeScout's security by blocking downloa
    - All file types are allowed for everyone
    - Use this to temporarily disable blocking without changing extension list
    - Useful for testing or maintenance
+
+### Archive Scanning (v3.1.0)
+
+**Scans compressed files for hidden malicious content:**
+
+- **ZIP file scanning**: Detects blocked file extensions inside ZIP archives
+- **Encrypted archive detection**: Automatically blocks password-protected archives (including nested encrypted ZIPs)
+- **Nested archive support**: Scans ZIP files within ZIP files (configurable depth: 0, 1, or 2 levels)
+- **Unreadable archive handling**: Configurable behavior for archives that cannot be scanned (corrupted, invalid format)
+- **Fail-safe design**: Configurable between maximum security (block unreadable) or permissive (allow with log)
+- **Performance optimized**: Only scans when Archive Scanning is enabled
+
+**Nesting Depth Options:**
+- **0 levels**: Scan main ZIP only, do not scan nested archives
+- **1 level** (recommended): Scan main ZIP + ZIPs inside it
+- **2 levels**: Scan main ZIP + ZIPs inside + ZIPs inside those
+
+**Unreadable Archive Modes:**
+- **Block download** (default): Archives that cannot be scanned are blocked (maximum security)
+- **Allow download**: Archives that cannot be scanned are allowed with error logged (fail-safe mode)
+
+**Example scenarios:**
+- `malware.zip` contains `virus.exe` → **BLOCKED** with custom message listing blocked files
+- `protected.zip` is password-protected → **BLOCKED** (cannot scan encrypted archives)
+- `nested.zip` contains `inner.zip` which contains `script.js` → **BLOCKED** (respects nesting depth)
+- `nested.zip` contains encrypted `inner.zip` → **BLOCKED** (encrypted nested archives are detected)
+- `corrupted.zip` cannot be opened → **BLOCKED** (default) or **ALLOWED** (if configured to allow)
+- `documents.zip` contains only `report.pdf` and `data.csv` → **ALLOWED** (no blocked extensions)
+
+**Configuration:**
+- Enable/disable archive scanning
+- Set maximum nesting depth (0, 1, or 2 levels - default: 1)
+- Choose behavior for unreadable archives (Block or Allow - default: Block)
+- Customize messages for blocked content, encrypted archives, and unreadable archives
+- Works with existing blocking modes (respects admin exemptions)
+
+**Future versions:** RAR, 7Z, TAR, GZ support coming in future releases
 
 ## Installation
 
@@ -72,7 +110,7 @@ The Attachment Security module enhances FreeScout's security by blocking downloa
 
 5. **Configure settings:**
    - Go to **Manage → Settings → Attachment Security**
-   - Configure blocked extensions, blocking mode, page title, message, and colors
+   - Configure blocked extensions, archive scan, blocking mode, page title, messages, and colors
    - Click **Save Settings**
 
 ## Configuration
@@ -96,9 +134,41 @@ exe,php,bat,cmd,htm,html,js,vbs,ps1,sh,phar,jar,msi
 - **Scripts:** php, js, vbs, phar
 - **Web files:** htm, html
 
+---
+
+**Archive Scanning**
+
+Enable or disable scanning of compressed files (ZIP) for blocked file extensions.
+
+- **Enabled**: ZIP files will be scanned for malicious content before allowing download
+- **Disabled**: ZIP files are treated as regular files (only blocked if .zip is in the blocked extensions list)
+
+**Scanned Archive Extensions**
+
+File types that will be scanned when Archive Scanning is enabled (read-only in v3.1.0):
+```
+zip
+```
+*Future versions will support RAR, 7Z, TAR, GZ formats*
+
+**Archive Maximum Nesting Depth**
+
+How many levels deep to scan for nested compressed files:
+- **0 levels**: Scan main ZIP only, do not scan nested archives
+- **1 level** (recommended): Scan main ZIP + ZIPs inside it
+- **2 levels**: Scan main ZIP + ZIPs inside + ZIPs inside those
+
+**Unreadable Archives**
+
+What to do when an archive cannot be scanned (corrupted file, invalid format, read error):
+- **Block download** (Default, recommended): Maximum security - prevents download of any archive that cannot be scanned
+- **Allow download**: Fail-safe mode - logs the error but permits download
+
+---
+
 **Blocking Mode**
 
-Select who should be affected by the blocking rules.
+Select who should be affected by the blocking rules (applies to both regular files and files inside archives).
 
 #### Section 2: Notifications & Messages
 
@@ -108,11 +178,12 @@ The title shown on the blocked page (default: "🚫 Download Blocked")
 
 **Block Message**
 
-Customize the message shown to users when a file download is blocked.
+Customize the message shown to users when a regular file download is blocked.
 
 **Available variables:**
 - `{filename}` - The name of the blocked file
 - `{extension}` - The file extension
+- `{blocked_files}` - Comma-separated list of blocked files (for archives)
 
 **Example message:**
 ```
@@ -122,6 +193,58 @@ Cannot download {filename}. Files with .{extension} extension are blocked for se
 **Default message:**
 ```
 For security reasons the file {filename} cannot be downloaded. If you need access to this content, please contact support.
+```
+
+**Archive Block Message**
+
+Message shown when a compressed file contains blocked files inside.
+
+**Available variables:**
+- `{filename}` - The name of the archive file
+- `{blocked_files}` - Comma-separated list of blocked files found inside
+
+**Example message:**
+```
+The archive {filename} contains the following blocked files: {blocked_files}
+```
+
+**Default message:**
+```
+The file {filename} contains blocked files: {blocked_files}
+```
+
+**Encrypted Archive Block Message**
+
+Message shown when a compressed file is password-protected and cannot be scanned.
+
+**Available variables:**
+- `{filename}` - The name of the encrypted archive
+
+**Example message:**
+```
+Cannot scan {filename} because it is password-protected.
+```
+
+**Default message:**
+```
+The file {filename} is password-protected and cannot be scanned for security reasons.
+```
+
+**Unreadable Archive Block Message**
+
+Message shown when an archive cannot be scanned (corrupted, invalid format) and "Block download" mode is enabled.
+
+**Available variables:**
+- `{filename}` - The name of the unreadable archive
+
+**Example message:**
+```
+The file {filename} could not be scanned and has been blocked for security reasons.
+```
+
+**Default message:**
+```
+The file {filename} cannot be scanned because it appears to be corrupted or has an invalid format. For security reasons, the download has been blocked.
 ```
 
 **Background Color**
@@ -138,29 +261,6 @@ Two comma-separated hex color codes for the gradient background (default: "#4A90
 Click this button to restore all settings to their default values.
 
 ## Technical Details
-
-### Code Architecture
-
-**v3.0.0 introduces a refactored architecture for better maintainability:**
-
-**Component Separation:**
-- **ServiceProvider**: Handles module registration, settings management, and request filtering
-- **AttachmentBlocker Middleware**: Dedicated class containing all blocking logic
-- **Clear Responsibilities**: Each component has a single, well-defined purpose
-
-**Benefits:**
-- **Maintainability**: Cleaner code structure following Laravel best practices
-- **Testability**: Isolated components are easier to unit test
-- **Extensibility**: New features can be added without affecting existing code
-- **Performance**: Targeted request processing with minimal overhead
-- **Debugging**: Production-ready logging with optional debug logs
-
-**Architecture Flow:**
-```
-Request → ServiceProvider (filters) → AttachmentBlocker Middleware → Block/Allow
-```
-
-The ServiceProvider acts as a gatekeeper, only delegating attachment requests to the middleware, ensuring the blocking logic only runs when necessary.
 
 ### Performance Optimization
 
@@ -205,12 +305,32 @@ storage/logs/attachmentsecurity.log
 
 **Configuration changes:**
 ```
-[2026-02-16 10:30:15] [INFO] [SERVICEPROVIDER] Configuration saved - Extensions: exe,php,bat | Mode: all
+[2026-02-22 10:30:15] [INFO] [SERVICEPROVIDER] Configuration saved - Extensions: exe,php,bat | Mode: all | Archive Scan: enabled
 ```
 
-**Blocked download attempts:**
+**Regular blocked download:**
 ```
-[2026-02-16 10:35:22] [WARNING] [MIDDLEWARE] BLOCKING DOWNLOAD | {"user":"user@example.com","ticket":"1523","file":"malware.exe","extension":"exe"}
+[2026-02-22 10:35:22] [WARNING] [MIDDLEWARE] BLOCKING DOWNLOAD | {"user":"user@example.com","ticket":"1523","file":"malware.exe","extension":"exe"}
+```
+
+**Archive with blocked content:**
+```
+[2026-02-22 10:40:15] [WARNING] [MIDDLEWARE] ARCHIVE CONTAINS BLOCKED FILES | {"user":"user@example.com","ticket":"1524","archive":"documents.zip","blocked_files":["malware.exe","script.js"],"nesting_level":1}
+```
+
+**Encrypted archive blocked:**
+```
+[2026-02-22 10:42:30] [WARNING] [MIDDLEWARE] ENCRYPTED ARCHIVE BLOCKED | {"user":"user@example.com","ticket":"1525","file":"protected.zip"}
+```
+
+**Unreadable archive blocked (Block mode - default):**
+```
+[2026-02-22 10:45:00] [WARNING] [MIDDLEWARE] UNREADABLE ARCHIVE BLOCKED | {"user":"user@example.com","ticket":"1526","file":"corrupted.zip","error":"Cannot open ZIP file"}
+```
+
+**Archive scan error (Allow mode enabled):**
+```
+[2026-02-22 10:50:00] [ERROR] [MIDDLEWARE] ARCHIVE SCAN FAILED | {"file":"corrupted.zip","error":"Cannot open ZIP file"}
 ```
 
 The ticket number is obtained from the attachment's conversation (using the `?id=` parameter in the URL).
@@ -295,14 +415,20 @@ For maximum security:
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
+### Version 3.1.0 (2026-02-22)
+- Archive Scanning: Scan ZIP files for malicious content
+- Configurable handling for unreadable/corrupted archives
+- Encrypted archive detection (including nested)
+- Nesting depth options (0, 1, 2)
+- Three customizable block messages
+- Production-ready logging
+
 ### Version 3.0.0 (2026-02-16)
 - Customizable blocked page (title, message, colors)
 - Custom blocked page generation
 - External JavaScript for CSP compliance
 - Reset to defaults button
 - Optimized request handling
-- Refactored architecture with separated middleware
-- Production-ready logging
 
 ### Version 2.0.0 (2026-02-14)
 - Role-based blocking modes

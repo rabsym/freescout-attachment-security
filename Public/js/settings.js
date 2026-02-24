@@ -24,7 +24,14 @@
                 for (var key in values) {
                     field = document.getElementById(key);
                     if (field) {
-                        field.value = values[key];
+                        // Handle checkboxes
+                        if (field.type === 'checkbox') {
+                            field.checked = !!values[key];
+                        }
+                        // Handle select and regular inputs
+                        else {
+                            field.value = values[key];
+                        }
                     }
                 }
             } catch (e) {

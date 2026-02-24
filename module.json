@@ -2,7 +2,7 @@
     "name": "Attachment Security",
     "alias": "attachmentsecurity",
     "description": "Enhanced security module that blocks dangerous file attachments with role-based control, customizable notifications, and comprehensive logging. Protects FreeScout from malicious files with admin exemptions and detailed audit trails.",
-    "version": "3.0.0",
+    "version": "3.1.0",
     "detailsUrl": "https://github.com/rabsym/freescout-attachment-security",
     "author": "Raimundo Alba",
     "authorUrl": "https://github.com/rabsym",
