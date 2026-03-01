@@ -3,12 +3,36 @@
 
     <input type="hidden" name="settings[dummy]" value="1" />
 
+    @php
+        // Check for conflicting archive extensions
+        $archiveScanEnabled = $settings['attachmentsecurity.archive_scan_enabled'] ?? false;
+        $blockedExtensions = $settings['attachmentsecurity.blocked_extensions'] ?? '';
+        
+        $conflictingExts = [];
+        if ($archiveScanEnabled && !empty($blockedExtensions)) {
+            $archiveExts = ['zip', 'rar', 'tar', 'gz', 'bz2', 'tgz', 'tbz2', 'tb2'];
+            $blockedExtsArray = array_filter(array_map('trim', explode(',', strtolower($blockedExtensions))));
+            $conflictingExts = array_intersect($archiveExts, $blockedExtsArray);
+        }
+    @endphp
+
+    @if (!empty($conflictingExts))
+        <div class="alert alert-warning" role="alert" style="margin-bottom: 20px;">
+            <i class="glyphicon glyphicon-warning-sign"></i>
+            <strong>{{ __('Warning') }}:</strong> 
+            {{ __('The following archive extensions are in your blocked list') }}: 
+            <strong>{{ implode(', ', $conflictingExts) }}</strong>. 
+            {{ __('These archives will be blocked immediately without scanning their contents.') }} 
+            {{ __('To allow content scanning, remove these extensions from the "Blocked Extensions" list.') }}
+        </div>
+    @endif
+
     {{-- SECTION 1: Security Configuration --}}
     <h3 class="subheader">
         <i class="glyphicon glyphicon-lock"></i> {{ __('Security Configuration') }}
     </h3>
     <p class="form-help block-help">
-        {{ __('Configure which file types should be blocked and who should be affected by these restrictions.') }}
+        {{ __('Define security rules for file attachments and archive scanning.') }}
     </p>
 
     {{-- Blocked File Extensions Field --}}
@@ -66,28 +90,6 @@
         </div>
     </div>
 
-    {{-- Scanned Archive Extensions (read-only for now) --}}
-    <div class="form-group">
-        <label for="archive_extensions" class="col-sm-2 control-label">
-            {{ __('Scanned Archive Extensions') }}
-        </label>
-        <div class="col-sm-6">
-            <input
-                type="text"
-                class="form-control input-sized-lg"
-                id="archive_extensions"
-                name="settings[attachmentsecurity.archive_extensions]"
-                value="{{ $settings['attachmentsecurity.archive_extensions'] ?? 'zip' }}"
-                readonly
-                style="background-color: #f5f5f5; cursor: not-allowed;"
-            >
-            <p class="form-help">
-                {{ __('Archive file types to scan (read-only in current version).') }}<br/>
-                <span style="color: #666;">{{ __('Currently supports ZIP files. More formats coming in future versions.') }}</span>
-            </p>
-        </div>
-    </div>
-
     {{-- Maximum Nesting Depth --}}
     <div class="form-group">
         <label for="max_nesting_depth" class="col-sm-2 control-label">
@@ -98,22 +100,24 @@
                 class="form-control input-sized-lg"
                 id="max_nesting_depth"
                 name="settings[attachmentsecurity.max_nesting_depth]"
+                style="min-width: 500px;"
             >
                 <option value="0" {{ ($settings['attachmentsecurity.max_nesting_depth'] ?? 1) == 0 ? 'selected' : '' }}>
-                    {{ __('0 levels (scan ZIP only, do not scan nested archives)') }}
+                    {{ __('0 levels (scan archive only, do not scan nested archives)') }}
                 </option>
                 <option value="1" {{ ($settings['attachmentsecurity.max_nesting_depth'] ?? 1) == 1 ? 'selected' : '' }}>
-                    {{ __('1 level (scan ZIP and 1 level of nested ZIPs - recommended)') }}
+                    {{ __('1 level (scan archive and 1 level of nested archives - recommended)') }}
                 </option>
                 <option value="2" {{ ($settings['attachmentsecurity.max_nesting_depth'] ?? 1) == 2 ? 'selected' : '' }}>
-                    {{ __('2 levels (scan ZIP and 2 levels of nested ZIPs)') }}
+                    {{ __('2 levels (scan archive and 2 levels of nested archives)') }}
                 </option>
             </select>
             <p class="form-help">
                 {{ __('How many levels deep to scan for nested compressed files.') }}<br/>
-                <strong>{{ __('Level 0:') }}</strong> {{ __('Only scan the main ZIP file') }}<br/>
-                <strong>{{ __('Level 1:') }}</strong> {{ __('Scan main ZIP + ZIPs inside it (recommended)') }}<br/>
-                <strong>{{ __('Level 2:') }}</strong> {{ __('Scan main ZIP + ZIPs inside + ZIPs inside those') }}
+                <strong>{{ __('Level 0:') }}</strong> {{ __('Only scan the main archive file') }}<br/>
+                <strong>{{ __('Level 1:') }}</strong> {{ __('Scan main archive + archives inside it (recommended)') }}<br/>
+                <strong>{{ __('Level 2:') }}</strong> {{ __('Scan main archive + archives inside + archives inside those') }}<br/><br/>
+                <em>{{ __('Example: A RAR file containing another RAR with a malicious file would be caught at level 1.') }}</em>
             </p>
         </div>
     </div>
@@ -141,6 +145,143 @@
                 <strong>{{ __('Block download:') }}</strong> {{ __('Maximum security - prevents download of any archive that cannot be scanned') }}<br/>
                 <strong>{{ __('Allow download:') }}</strong> {{ __('Fail-safe mode - logs the error but permits download') }}
             </p>
+        </div>
+    </div>
+
+    {{-- Archive Format Support Status --}}
+    <div class="form-group">
+        <div class="col-sm-6 col-sm-offset-2">
+            <div class="alert alert-info" style="margin-top: 15px;">
+                <h4 style="margin-top: 0;">
+                    <i class="glyphicon glyphicon-info-sign"></i> {{ __('Supported Archive Formats') }}
+                </h4>
+                <p class="text-muted" style="margin: 5px 0 10px 0; font-size: 12px;">
+                    {{ __('Automatically updated when saving configuration changes') }}
+                </p>
+                
+                <table class="table table-condensed" style="margin-bottom: 0; margin-top: 10px; background: white;">
+                    <thead>
+                        <tr>
+                            <th>{{ __('Format') }}</th>
+                            <th>{{ __('Status') }}</th>
+                            <th>{{ __('Details') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{-- ZIP --}}
+                        <tr>
+                            <td><strong>ZIP</strong></td>
+                            <td><span class="label label-success">✓ {{ __('Available') }}</span></td>
+                            <td>{{ $settings['_archive_capabilities']['zip']['details'] ?? 'ZipArchive (native PHP)' }}</td>
+                        </tr>
+                        
+                        {{-- RAR --}}
+                        <tr>
+                            <td><strong>RAR</strong></td>
+                            <td>
+                                @if($settings['_archive_capabilities']['rar']['available'] ?? false)
+                                    <span class="label label-success">✓ {{ __('Available') }}</span>
+                                @else
+                                    <span class="label label-warning">✗ {{ __('Not Available') }}</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($settings['_archive_capabilities']['rar']['available'] ?? false)
+                                    @php
+                                        $rarType = $settings['_archive_capabilities']['rar']['type'] ?? 'unknown';
+                                        $rarVersion = $settings['_archive_capabilities']['rar']['version'] ?? null;
+                                        $rar5Support = $settings['_archive_capabilities']['rar']['rar5_support'] ?? false;
+                                    @endphp
+                                    @if($rarType === 'extension')
+                                        <strong>{{ __('RAR (PHP Extension)') }}</strong>
+                                        <span class="label label-info">{{ __('Full support') }}</span>
+                                    @elseif($rarType === 'nonfree')
+                                        <strong>{{ __('RAR (RAR Lab)') }}</strong>
+                                        <span class="label label-info">{{ __('Full RAR 5.x') }}</span>
+                                    @elseif($rarType === 'free')
+                                        <strong>{{ __('RAR (Free)') }}</strong>
+                                        <span class="label label-warning">⚠ {{ __('RAR 2.x only') }}</span>
+                                    @else
+                                        <strong>{{ __('RAR (Unknown)') }}</strong>
+                                    @endif
+                                    @if($rarVersion)
+                                        <small class="text-muted">v{{ $rarVersion }}</small>
+                                    @endif
+                                @else
+                                    <a href="#" data-toggle="collapse" data-target="#rar-install-instructions">
+                                        <i class="glyphicon glyphicon-question-sign"></i> {{ __('How to enable') }}
+                                    </a>
+                                @endif
+                            </td>
+                        </tr>
+                        
+                        {{-- TAR --}}
+                        <tr>
+                            <td><strong>TAR</strong></td>
+                            <td>
+                                @if($settings['_archive_capabilities']['tar']['available'] ?? false)
+                                    <span class="label label-success">✓ {{ __('Available') }}</span>
+                                @else
+                                    <span class="label label-danger">✗ {{ __('Not Available') }}</span>
+                                @endif
+                            </td>
+                            <td>{{ $settings['_archive_capabilities']['tar']['details'] ?? 'PharData not available' }}</td>
+                        </tr>
+                        
+                        {{-- GZ --}}
+                        <tr>
+                            <td><strong>GZ</strong></td>
+                            <td>
+                                @if($settings['_archive_capabilities']['gz']['available'] ?? false)
+                                    <span class="label label-success">✓ {{ __('Available') }}</span>
+                                @else
+                                    <span class="label label-danger">✗ {{ __('Not Available') }}</span>
+                                @endif
+                            </td>
+                            <td>{{ $settings['_archive_capabilities']['gz']['details'] ?? 'zlib extension not available' }}</td>
+                        </tr>
+                        
+                        {{-- BZ2 --}}
+                        <tr>
+                            <td><strong>BZ2</strong></td>
+                            <td>
+                                @if($settings['_archive_capabilities']['bz2']['available'] ?? false)
+                                    <span class="label label-success">✓ {{ __('Available') }}</span>
+                                @else
+                                    <span class="label label-danger">✗ {{ __('Not Available') }}</span>
+                                @endif
+                            </td>
+                            <td>{{ $settings['_archive_capabilities']['bz2']['details'] ?? 'bz2 extension not available' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <p class="text-muted" style="margin-top: 10px; margin-bottom: 0;">
+                    <small>
+                        <i class="glyphicon glyphicon-time"></i> 
+                        {{ __('Last checked and updated:') }} {{ $settings['_archive_capabilities_scanned_at'] ?? __('Never') }}
+                    </small>
+                </p>
+                
+                {{-- RAR Installation Instructions (collapsed by default) --}}
+                <div id="rar-install-instructions" class="collapse" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                    <h5><i class="glyphicon glyphicon-wrench"></i> {{ __('How to Enable RAR Support') }}</h5>
+                    
+                    <p><strong>{{ __('Option 1 (Recommended):') }}</strong> {{ __('PHP RAR extension') }}</p>
+                    <pre style="background: #f5f5f5; padding: 10px;">pecl install rar
+echo "extension=rar.so" >> /etc/php/8.x/mods-available/rar.ini
+phpenmod rar
+systemctl restart php8.x-fpm</pre>
+                    
+                    <p><strong>{{ __('Option 2:') }}</strong> {{ __('unrar-nonfree (Full RAR 5.x support)') }}</p>
+                    <pre style="background: #f5f5f5; padding: 10px;">apt-get install unrar</pre>
+                    
+                    <p><strong>{{ __('Option 3:') }}</strong> {{ __('unrar-free (Limited to RAR 2.x)') }}</p>
+                    <pre style="background: #f5f5f5; padding: 10px;">apt-get install unrar-free</pre>
+                    
+                    <p class="text-muted"><small>{{ __('After installation, save settings to detect the changes.') }}</small></p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -330,7 +471,6 @@
                         'blocked_extensions' => 'exe,php,bat,cmd,htm,html,js,vbs,ps1,sh,phar',
                         'blocking_mode' => 'all',
                         'archive_scan_enabled' => false,
-                        'archive_extensions' => 'zip',
                         'max_nesting_depth' => 1,
                         'unreadable_archives_mode' => 'block',
                         'page_title' => '🚫 Download Blocked',

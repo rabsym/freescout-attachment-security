@@ -11,11 +11,11 @@ use Modules\AttachmentSecurity\Services\ArchiveScanner;
  *
  * Handles attachment download blocking based on file extension and blocking mode.
  * Separated from ServiceProvider in v3.0.0 for better code organization.
- * v3.0.1-dev: Added archive scanning functionality.
+ * v3.2.0: Added multi-format archive scanning (ZIP, RAR, TAR, GZ, BZ2).
  *
  * @package Modules\AttachmentSecurity
  * @author  Raimundo Alba
- * @version 3.1.0
+ * @version 3.2.0
  */
 class AttachmentBlocker
 {
@@ -86,12 +86,37 @@ class AttachmentBlocker
             return $this->blockDownload($request, $path, $extension, 'regular');
         }
         
-        // NEW LOGIC v3.0.1-dev: Check if this is an archive that should be scanned
+        // NEW LOGIC v3.2.0: Check if this is an archive that should be scanned
         $archiveScanEnabled = Module::getOption('attachmentsecurity', 'archive_scan_enabled', false);
-        $archiveExtensionsStr = Module::getOption('attachmentsecurity', 'archive_extensions', config('attachmentsecurity.archive_extensions'));
-        $archiveExtensions = array_filter(array_map('trim', explode(',', strtolower($archiveExtensionsStr))));
         
-        if ($archiveScanEnabled && in_array($extension, $archiveExtensions)) {
+        // Get available archive formats from capabilities (not from archive_extensions setting)
+        $archiveExtensions = [];
+        if ($archiveScanEnabled) {
+            $capabilitiesJson = Module::getOption('attachmentsecurity', 'archive_capabilities');
+            if ($capabilitiesJson) {
+                $capabilities = is_array($capabilitiesJson) ? $capabilitiesJson : json_decode($capabilitiesJson, true);
+                if ($capabilities) {
+                    foreach ($capabilities as $format => $info) {
+                        if ($info['available'] ?? false) {
+                            $archiveExtensions[] = $format;
+                            
+                            // Add alternative extensions for compound formats
+                            // TGZ requires both TAR and GZ
+                            if ($format === 'gz' && isset($capabilities['tar']) && ($capabilities['tar']['available'] ?? false)) {
+                                $archiveExtensions[] = 'tgz';  // .tgz is tar.gz
+                            }
+                            // TBZ2/TB2 require both TAR and BZ2
+                            elseif ($format === 'bz2' && isset($capabilities['tar']) && ($capabilities['tar']['available'] ?? false)) {
+                                $archiveExtensions[] = 'tbz2'; // .tbz2 is tar.bz2
+                                $archiveExtensions[] = 'tb2';  // .tb2 is tar.bz2
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        if ($archiveScanEnabled && !empty($archiveExtensions) && in_array($extension, $archiveExtensions)) {
             // This is an archive file and scanning is enabled
             return $this->handleArchiveScan($request, $path, $extension, $blockedExtensions, $next);
         }
@@ -142,7 +167,7 @@ class AttachmentBlocker
             // Scan the archive
             $maxNestingDepth = Module::getOption('attachmentsecurity', 'max_nesting_depth', config('attachmentsecurity.max_nesting_depth'));
             $scanner = new ArchiveScanner();
-            $result = $scanner->scanZip($filepath, $blockedExtensions, $maxNestingDepth);
+            $result = $scanner->scan($filepath, $blockedExtensions, $maxNestingDepth);
 
             // Check if scanning resulted in an error
             if ($result['error']) {
@@ -436,7 +461,20 @@ HTML;
     protected function log($level, $message, $context = [])
     {
         $logFile = storage_path('logs/attachmentsecurity.log');
-        $contextStr = !empty($context) ? ' | ' . json_encode($context) : '';
+        
+        // Sanitize context to ensure valid UTF-8 for json_encode
+        if (!empty($context)) {
+            array_walk_recursive($context, function(&$value) {
+                if (is_string($value)) {
+                    // Remove non-UTF-8 characters and ensure valid encoding
+                    $value = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+                    // Replace any remaining problematic bytes
+                    $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/u', '', $value);
+                }
+            });
+        }
+        
+        $contextStr = !empty($context) ? ' | ' . json_encode($context, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '';
         $logEntry = "[" . date('Y-m-d H:i:s') . "] [{$level}] [MIDDLEWARE] {$message}{$contextStr}\n";
         file_put_contents($logFile, $logEntry, FILE_APPEND);
     }

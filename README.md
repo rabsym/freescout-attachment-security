@@ -1,20 +1,24 @@
 # Attachment Security Module for FreeScout
 
-**Version:** 3.1.0  
+**Version:** 3.2.0 (Released: March 1, 2026)  
 **Author:** Raimundo Alba  
 **GitHub:** https://github.com/rabsym/freescout-attachment-security  
 **License:** MIT
 
 ## Overview
 
-The Attachment Security module enhances FreeScout's security by blocking downloads of potentially dangerous file attachments based on their file extensions. It provides flexible configuration options including role-based blocking modes, customizable blocked page, comprehensive logging, and **archive scanning with configurable handling of unreadable archives** to detect malicious files hidden inside compressed archives.
+The Attachment Security module enhances FreeScout's security by blocking downloads of potentially dangerous file attachments based on their file extensions. It provides flexible configuration options including role-based blocking modes, customizable blocked page, comprehensive logging, and **multi-format archive scanning** (ZIP, RAR, TAR, GZ, BZ2) with automatic detection of supported archive formats to detect malicious files hidden inside compressed archives.
 
 ## Features
 
 ### Core Functionality
 - ✅ **Extension-based blocking**: Block downloads by file extension (exe, php, js, etc.)
-- ✅ **Archive scanning** (v3.1.0): Scan ZIP files for hidden malicious content
-- ✅ **Unreadable archive handling** (v3.1.0): Configurable behavior for corrupted/unreadable archives
+- ✅ **Multi-format archive scanning** (v3.2.0): Scan ZIP, RAR, TAR, GZ, and BZ2 files for hidden malicious content
+- ✅ **Automatic detection of supported archive formats** (v3.2.0): System detects available archive handlers and uses the best method
+- ✅ **Enhanced encryption detection** (v3.2.0): Detects both header and content-encrypted archives
+- ✅ **Universal nesting control** (v3.2.0): Configurable depth for all archive formats
+- ✅ **Unreadable archive handling**: Configurable behavior for corrupted/unreadable archives
+- ✅ **Automated check for new module versions**: Integrated update notification and one-click updates
 - ✅ **Role-based control**: Different blocking modes for administrators vs regular users
 - ✅ **Customizable blocked page**: Page title, message with variables, and gradient colors
 - ✅ **Real-time configuration**: Changes take effect immediately without cache clearing
@@ -40,21 +44,21 @@ The Attachment Security module enhances FreeScout's security by blocking downloa
    - Use this to temporarily disable blocking without changing extension list
    - Useful for testing or maintenance
 
-### Archive Scanning (v3.1.0)
+### Archive Scanning
 
 **Scans compressed files for hidden malicious content:**
 
-- **ZIP file scanning**: Detects blocked file extensions inside ZIP archives
-- **Encrypted archive detection**: Automatically blocks password-protected archives (including nested encrypted ZIPs)
-- **Nested archive support**: Scans ZIP files within ZIP files (configurable depth: 0, 1, or 2 levels)
+- **Multi-format scanning**: Detects blocked file extensions inside ZIP, RAR, TAR, GZ, and BZ2 archives
+- **Encrypted archive detection**: Automatically blocks password-protected archives (including nested encrypted archives)
+- **Nested archive support**: Scans archives within archives, even across different formats (configurable depth: 0, 1, or 2 levels)
 - **Unreadable archive handling**: Configurable behavior for archives that cannot be scanned (corrupted, invalid format)
 - **Fail-safe design**: Configurable between maximum security (block unreadable) or permissive (allow with log)
 - **Performance optimized**: Only scans when Archive Scanning is enabled
 
 **Nesting Depth Options:**
-- **0 levels**: Scan main ZIP only, do not scan nested archives
-- **1 level** (recommended): Scan main ZIP + ZIPs inside it
-- **2 levels**: Scan main ZIP + ZIPs inside + ZIPs inside those
+- **0 levels**: Scan main archive only, do not scan nested archives
+- **1 level** (recommended): Scan main archive + archives inside it
+- **2 levels**: Scan main archive + archives inside + archives inside those
 
 **Unreadable Archive Modes:**
 - **Block download** (default): Archives that cannot be scanned are blocked (maximum security)
@@ -62,10 +66,10 @@ The Attachment Security module enhances FreeScout's security by blocking downloa
 
 **Example scenarios:**
 - `malware.zip` contains `virus.exe` → **BLOCKED** with custom message listing blocked files
-- `protected.zip` is password-protected → **BLOCKED** (cannot scan encrypted archives)
-- `nested.zip` contains `inner.zip` which contains `script.js` → **BLOCKED** (respects nesting depth)
-- `nested.zip` contains encrypted `inner.zip` → **BLOCKED** (encrypted nested archives are detected)
-- `corrupted.zip` cannot be opened → **BLOCKED** (default) or **ALLOWED** (if configured to allow)
+- `protected.rar` is password-protected → **BLOCKED** (cannot scan encrypted archives)
+- `nested.zip` contains `inner.rar` which contains `script.js` → **BLOCKED** (respects nesting depth and multi-format)
+- `archive.tar.gz` contains encrypted `data.zip` → **BLOCKED** (encrypted nested archives are detected)
+- `corrupted.rar` cannot be opened → **BLOCKED** (default) or **ALLOWED** (if configured to allow)
 - `documents.zip` contains only `report.pdf` and `data.csv` → **ALLOWED** (no blocked extensions)
 
 **Configuration:**
@@ -75,13 +79,46 @@ The Attachment Security module enhances FreeScout's security by blocking downloa
 - Customize messages for blocked content, encrypted archives, and unreadable archives
 - Works with existing blocking modes (respects admin exemptions)
 
-**Future versions:** RAR, 7Z, TAR, GZ support coming in future releases
+## Supported Archive Formats
+
+The module automatically detects which archive formats your server can handle:
+
+| Format | Handler | Status |
+|--------|---------|--------|
+| **ZIP** | ZipArchive (PHP native) | Always available |
+| **RAR** | unrar-nonfree or unrar-free | Auto-detected |
+| **TAR** | PharData (PHP native) | Always available |
+| **GZ** | PharData + zlib extension | Auto-detected |
+| **BZ2** | PharData + bz2 extension | Auto-detected |
+
+### RAR Support
+
+Two methods are supported (in order of preference):
+
+1. **unrar (RAR Lab - nonfree)**: Full RAR 5.x support - **recommended**
+   ```bash
+   # Debian/Ubuntu
+   apt-get install unrar
+   
+   # RHEL/CentOS (requires EPEL)
+   yum install unrar
+   ```
+
+2. **unrar-free**: Limited to RAR 2.x only (older RAR archives)
+   ```bash
+   # Debian/Ubuntu
+   apt-get install unrar-free
+   ```
+
+The module will automatically detect and use the best available method. Check the settings page under "Supported Archive Formats" to see which formats are available on your server.
 
 ## Installation
 
 ### Requirements
 - FreeScout 1.8.0 or higher
 - PHP 7.4 or higher
+- PHP extensions: `zip` (required), `zlib` (for GZ), `bz2` (for BZ2)
+- Optional: `unrar` or `unrar-free` binary for RAR support
 - Write permissions on `storage/logs/` directory
 
 ### Steps
@@ -89,7 +126,7 @@ The Attachment Security module enhances FreeScout's security by blocking downloa
 1. **Upload the module:**
    ```bash
    cd /var/www/html/Modules
-   tar -xzf AttachmentSecurity_v3.0.0.tar.gz
+   tar -xzf AttachmentSecurity_v3.2.0.tar.gz
    ```
 
 2. **Set permissions:**
@@ -138,25 +175,21 @@ exe,php,bat,cmd,htm,html,js,vbs,ps1,sh,phar,jar,msi
 
 **Archive Scanning**
 
-Enable or disable scanning of compressed files (ZIP) for blocked file extensions.
+Enable or disable scanning of compressed files for blocked file extensions.
 
-- **Enabled**: ZIP files will be scanned for malicious content before allowing download
-- **Disabled**: ZIP files are treated as regular files (only blocked if .zip is in the blocked extensions list)
+- **Enabled**: Archive files (ZIP, RAR, TAR, GZ, BZ2) will be scanned for malicious content before allowing download
+- **Disabled**: Archive files are treated as regular files (only blocked if their extension is in the blocked extensions list)
 
-**Scanned Archive Extensions**
-
-File types that will be scanned when Archive Scanning is enabled (read-only in v3.1.0):
-```
-zip
-```
-*Future versions will support RAR, 7Z, TAR, GZ formats*
+The system automatically detects which archive formats are available on your server. See "Supported Archive Formats" section in Settings for details.
 
 **Archive Maximum Nesting Depth**
 
 How many levels deep to scan for nested compressed files:
-- **0 levels**: Scan main ZIP only, do not scan nested archives
-- **1 level** (recommended): Scan main ZIP + ZIPs inside it
-- **2 levels**: Scan main ZIP + ZIPs inside + ZIPs inside those
+- **0 levels**: Scan main archive only, do not scan nested archives
+- **1 level** (recommended): Scan main archive + archives inside it
+- **2 levels**: Scan main archive + archives inside + archives inside those
+
+This applies to all archive formats and supports multi-format nesting (e.g., RAR inside ZIP inside TAR).
 
 **Unreadable Archives**
 
@@ -305,22 +338,22 @@ storage/logs/attachmentsecurity.log
 
 **Configuration changes:**
 ```
-[2026-02-22 10:30:15] [INFO] [SERVICEPROVIDER] Configuration saved - Extensions: exe,php,bat | Mode: all | Archive Scan: enabled
+[2026-02-27 10:30:15] [INFO] [SERVICEPROVIDER] Configuration saved - Blocked Extensions: exe,php,bat | Block Mode: all | Archive Scan: enabled | Nesting Depth: 1 | Unreadable Archives: block | Archive Formats: zip(native), rar(nonfree), tar(native), gz(native), bz2(native)
 ```
 
 **Regular blocked download:**
 ```
-[2026-02-22 10:35:22] [WARNING] [MIDDLEWARE] BLOCKING DOWNLOAD | {"user":"user@example.com","ticket":"1523","file":"malware.exe","extension":"exe"}
+[2026-02-27 10:35:22] [WARNING] [MIDDLEWARE] BLOCKING DOWNLOAD | {"user":"user@example.com","ticket":"1523","file":"malware.exe","extension":"exe"}
 ```
 
 **Archive with blocked content:**
 ```
-[2026-02-22 10:40:15] [WARNING] [MIDDLEWARE] ARCHIVE CONTAINS BLOCKED FILES | {"user":"user@example.com","ticket":"1524","archive":"documents.zip","blocked_files":["malware.exe","script.js"],"nesting_level":1}
+[2026-02-27 10:40:15] [WARNING] [MIDDLEWARE] ARCHIVE CONTAINS BLOCKED FILES | {"user":"user@example.com","ticket":"1524","archive":"malware.rar","blocked_files":["virus.exe","trojan.bat"],"nesting_level":1}
 ```
 
 **Encrypted archive blocked:**
 ```
-[2026-02-22 10:42:30] [WARNING] [MIDDLEWARE] ENCRYPTED ARCHIVE BLOCKED | {"user":"user@example.com","ticket":"1525","file":"protected.zip"}
+[2026-02-27 10:42:30] [WARNING] [MIDDLEWARE] ENCRYPTED ARCHIVE BLOCKED | {"user":"user@example.com","ticket":"1525","file":"protected.rar"}
 ```
 
 **Unreadable archive blocked (Block mode - default):**
@@ -414,6 +447,17 @@ For maximum security:
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
+
+### Version 3.2.0 (2026-03-01)
+- Multi-format archive scanning: ZIP, RAR, TAR, GZ, BZ2
+- Automatic detection of supported archive formats with capabilities UI
+- Multi-format nesting support (e.g., RAR → ZIP → malware)
+- Compound format support (.tgz, .tbz2, .tar.gz, .tar.bz2)
+- Enhanced encryption detection (header + content)
+- Universal nesting control for all formats
+- Automated update checking and one-click updates
+- Improved logging and UI terminology
+- Configuration warnings for conflicting settings
 
 ### Version 3.1.0 (2026-02-22)
 - Archive Scanning: Scan ZIP files for malicious content

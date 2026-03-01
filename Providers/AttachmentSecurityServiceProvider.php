@@ -15,7 +15,7 @@ use Module;
  *
  * @package Modules\AttachmentSecurity
  * @author  Raimundo Alba
- * @version 3.1.0
+ * @version 3.2.0
  */
 class AttachmentSecurityServiceProvider extends ServiceProvider
 {
@@ -287,6 +287,16 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
             $settings[self::SETTINGS_SECTION . '.unreadable_archives_mode'] = $unreadableArchivesMode;
             $settings[self::SETTINGS_SECTION . '.unreadable_archive_block_message'] = $unreadableArchiveBlockMessage;
 
+            // Get archive format capabilities
+            $capabilities = $this->getArchiveCapabilities();
+            $availableFormats = $this->getAvailableArchiveFormats($capabilities);
+            $lastScanDate = Module::getOption(self::MODULE_ALIAS, 'archive_capabilities_scanned_at');
+
+            // Pass capabilities to view (use underscore prefix to distinguish from settings)
+            $settings['_archive_capabilities'] = $capabilities;
+            $settings['_available_archive_formats'] = $availableFormats;
+            $settings['_archive_capabilities_scanned_at'] = $lastScanDate;
+
             return $settings;
         }, 20, 2);
     }
@@ -320,6 +330,9 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
             if ($section !== self::SETTINGS_SECTION) {
                 return $request;
             }
+
+            // Always detect and save capabilities on each save
+            $this->detectAndSaveArchiveCapabilities();
 
             // Extract settings data from request
             // Using array notation because the setting keys contain dots
@@ -433,7 +446,7 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
             );
 
             // Log the configuration change
-            $this->logConfigurationChange($blockedExtensions, $blockingMode, $archiveScanEnabled);
+            $this->logConfigurationChange($blockedExtensions, $blockingMode, $archiveScanEnabled, $maxNestingDepth, $unreadableArchivesMode);
 
             return $request;
         }, 20, 3);
@@ -445,21 +458,112 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
      * @param string $blockedExtensions Comma-separated list of blocked extensions
      * @param string $blockingMode      Blocking mode (all, regular, disabled)
      * @param bool $archiveScanEnabled  Archive scan status
+     * @param int $maxNestingDepth      Maximum nesting depth
+     * @param string $unreadableArchivesMode Unreadable archives mode (block, allow)
      * @return void
      */
-    protected function logConfigurationChange($blockedExtensions, $blockingMode, $archiveScanEnabled = false)
+    protected function logConfigurationChange($blockedExtensions, $blockingMode, $archiveScanEnabled = false, $maxNestingDepth = 1, $unreadableArchivesMode = 'block')
     {
         $logFile = storage_path('logs/attachmentsecurity.log');
         
+        // Get available formats from capabilities
+        $capabilitiesJson = \Module::getOption('attachmentsecurity', 'archive_capabilities');
+        $availableFormats = [];
+        if ($capabilitiesJson) {
+            $capabilities = is_array($capabilitiesJson) ? $capabilitiesJson : json_decode($capabilitiesJson, true);
+            if ($capabilities) {
+                foreach ($capabilities as $format => $info) {
+                    if ($info['available'] ?? false) {
+                        $type = $info['type'] ?? 'unknown';
+                        $availableFormats[] = $format . '(' . $type . ')';
+                    }
+                }
+            }
+        }
+        $formatsString = !empty($availableFormats) ? implode(', ', $availableFormats) : 'none';
+        
         $logEntry = sprintf(
-            "[%s] [INFO] [SERVICEPROVIDER] Configuration saved - Extensions: %s | Mode: %s | Archive Scan: %s\n",
+            "[%s] [INFO] [SERVICEPROVIDER] Configuration saved - Blocked Extensions: %s | Block Mode: %s | Archive Scan: %s | Nesting Depth: %d | Unreadable Archives: %s | Archive Formats: %s\n",
             date('Y-m-d H:i:s'),
             $blockedExtensions ?: 'none',
             $blockingMode,
-            $archiveScanEnabled ? 'enabled' : 'disabled'
+            $archiveScanEnabled ? 'enabled' : 'disabled',
+            $maxNestingDepth,
+            $unreadableArchivesMode,
+            $formatsString
         );
 
         file_put_contents($logFile, $logEntry, FILE_APPEND);
+    }
+
+    /**
+     * Detect and save archive format capabilities to database
+     *
+     * @return array Detected capabilities
+     */
+    protected function detectAndSaveArchiveCapabilities(): array
+    {
+        $capabilities = \Modules\AttachmentSecurity\Services\ScannerCapabilities::detect();
+        
+        // Save capabilities as JSON
+        \Module::setOption(
+            self::MODULE_ALIAS, 
+            'archive_capabilities', 
+            json_encode($capabilities)
+        );
+        
+        // Save scan timestamp
+        \Module::setOption(
+            self::MODULE_ALIAS,
+            'archive_capabilities_scanned_at',
+            date('Y-m-d H:i:s')
+        );
+        
+        return $capabilities;
+    }
+
+    /**
+     * Get cached archive capabilities (or detect if not cached)
+     *
+     * @return array Archive format capabilities
+     */
+    protected function getArchiveCapabilities(): array
+    {
+        $cached = \Module::getOption(self::MODULE_ALIAS, 'archive_capabilities');
+        
+        if (!$cached) {
+            // First time - detect and save
+            return $this->detectAndSaveArchiveCapabilities();
+        }
+        
+        // Check if already decoded (array) or needs decoding (string)
+        if (is_array($cached)) {
+            return $cached;
+        }
+        
+        return json_decode($cached, true) ?: [];
+    }
+
+    /**
+     * Get comma-separated list of available archive formats
+     *
+     * @param array|null $capabilities If null, will load from cache
+     * @return string Comma-separated format list (e.g., "zip,rar,tar")
+     */
+    protected function getAvailableArchiveFormats(?array $capabilities = null): string
+    {
+        if ($capabilities === null) {
+            $capabilities = $this->getArchiveCapabilities();
+        }
+
+        $available = [];
+        foreach ($capabilities as $format => $info) {
+            if ($info['available']) {
+                $available[] = $format;
+            }
+        }
+
+        return implode(',', $available);
     }
 
     /**
