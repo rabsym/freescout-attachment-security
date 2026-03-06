@@ -40,3 +40,60 @@
         });
     });
 })();
+
+
+
+
+
+// Validation for Blocked Extensions field
+document.addEventListener('DOMContentLoaded', function() {
+
+    const blockedExtInput = document.getElementById('blocked_extensions');
+    const errorSpan = document.getElementById('blocked_extensions_error');
+    const form = blockedExtInput ? blockedExtInput.closest('form') : null;
+
+    // Skip if elements don't exist (not in settings page)
+    if (!blockedExtInput || !errorSpan || !form) {
+        return;
+    }
+
+    // Real-time validation
+    blockedExtInput.addEventListener('input', function() {
+        validateBlockedExtensions(true);
+    });
+
+    // Validation on form submit
+    form.addEventListener('submit', function(e) {
+        if (!validateBlockedExtensions(true)) {
+            e.preventDefault();
+            blockedExtInput.focus();
+            return false;
+        }
+    });
+    
+    function validateBlockedExtensions(showError) {
+        const value = blockedExtInput.value.trim();
+        
+        // Empty is valid
+        if (value === '') {
+            errorSpan.style.display = 'none';
+            blockedExtInput.style.borderColor = '';
+            return true;
+        }
+        
+        // Regex: only letters, numbers and commas (no spaces or special chars)
+        const regex = /^[a-zA-Z0-9]+(,[a-zA-Z0-9]+)*$/;
+        
+        if (!regex.test(value)) {
+            if (showError) {
+                errorSpan.style.display = 'block';
+                blockedExtInput.style.borderColor = '#d9534f';
+            }
+            return false;
+        } else {
+            errorSpan.style.display = 'none';
+            blockedExtInput.style.borderColor = '';
+            return true;
+        }
+    }
+});

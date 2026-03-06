@@ -8,7 +8,7 @@
  *
  * @package Modules\AttachmentSecurity
  * @author  Raimundo Alba
- * @version 3.2.0
+ * @version 3.3.0
  */
 
 return [

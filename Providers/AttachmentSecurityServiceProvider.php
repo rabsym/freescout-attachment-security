@@ -3,6 +3,7 @@
 namespace Modules\AttachmentSecurity\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Modules\AttachmentSecurity\Logging\LoggerAttachmentSecurity;
 use Modules\AttachmentSecurity\Http\Middleware\AttachmentBlocker;
 use Module;
 
@@ -15,7 +16,7 @@ use Module;
  *
  * @package Modules\AttachmentSecurity
  * @author  Raimundo Alba
- * @version 3.2.0
+ * @version 3.3.0
  */
 class AttachmentSecurityServiceProvider extends ServiceProvider
 {
@@ -109,9 +110,7 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
     protected function registerMiddleware()
     {
         \Eventy::addAction('middleware.web.custom_handle', function ($request, $next = null) {
-            // Debug logging commented for production
-            // $this->logDebug('ServiceProvider: middleware hook called');
-            
+
             // Ensure we have a valid $next closure
             if (!$next) {
                 $next = fn($req) => $req;
@@ -119,29 +118,20 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
 
             // Only process attachment download requests
             if (!$request->is('storage/attachment/*')) {
-                // $this->logDebug('ServiceProvider: Not attachment request, passing through');
                 return $next($request);
             }
 
-            // $this->logDebug('ServiceProvider: IS attachment request, delegating to Middleware');
-            
             // Delegate to the AttachmentBlocker middleware
             $blocker = new AttachmentBlocker();
             return $blocker->handle($request, $next);
         }, 10, 2);
     }
     
-    /**
-     * Debug logging helper
-     */
-    protected function logDebug($message, $context = [])
-    {
-        $logFile = storage_path('logs/attachmentsecurity.log');
-        $contextStr = !empty($context) ? ' | ' . json_encode($context) : '';
-        $logEntry = "[" . date('Y-m-d H:i:s') . "] [DEBUG] [SERVICEPROVIDER] {$message}{$contextStr}\n";
-        file_put_contents($logFile, $logEntry, FILE_APPEND);
-    }
-    
+
+
+
+
+
     /**
      * Generate blocked page HTML dynamically.
      */
@@ -481,19 +471,20 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
             }
         }
         $formatsString = !empty($availableFormats) ? implode(', ', $availableFormats) : 'none';
-        
-        $logEntry = sprintf(
-            "[%s] [INFO] [SERVICEPROVIDER] Configuration saved - Blocked Extensions: %s | Block Mode: %s | Archive Scan: %s | Nesting Depth: %d | Unreadable Archives: %s | Archive Formats: %s\n",
-            date('Y-m-d H:i:s'),
-            $blockedExtensions ?: 'none',
-            $blockingMode,
-            $archiveScanEnabled ? 'enabled' : 'disabled',
-            $maxNestingDepth,
-            $unreadableArchivesMode,
-            $formatsString
+
+
+        LoggerAttachmentSecurity::info(
+            '[SERVICEPROVIDER] CONFIGURATION SAVED - ' . sprintf(
+                "Blocked Extensions: %s | Block Mode: %s | Archive Scan: %s | Nesting Depth: %d | Unreadable Archives: %s | Supported Archive Formats: %s",
+                $blockedExtensions ?: 'none',
+                $blockingMode,
+                $archiveScanEnabled ? 'enabled' : 'disabled',
+                $maxNestingDepth,
+                $unreadableArchivesMode,
+                $formatsString
+            )
         );
 
-        file_put_contents($logFile, $logEntry, FILE_APPEND);
     }
 
     /**

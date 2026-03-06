@@ -1,6 +1,6 @@
 # Attachment Security Module for FreeScout
 
-**Version:** 3.2.0 (Released: March 1, 2026)  
+**Version:** 3.3.0 (Released: March 6, 2026)  
 **Author:** Raimundo Alba  
 **GitHub:** https://github.com/rabsym/freescout-attachment-security  
 **License:** MIT
@@ -17,8 +17,11 @@ The Attachment Security module enhances FreeScout's security by blocking downloa
 - ✅ **Automatic detection of supported archive formats** (v3.2.0): System detects available archive handlers and uses the best method
 - ✅ **Enhanced encryption detection** (v3.2.0): Detects both header and content-encrypted archives
 - ✅ **Universal nesting control** (v3.2.0): Configurable depth for all archive formats
+- ✅ **Better 0-byte file handling** (v3.3.0): Valid empty compressed files no longer flagged as corrupted
 - ✅ **Unreadable archive handling**: Configurable behavior for corrupted/unreadable archives
 - ✅ **Automated check for new module versions**: Integrated update notification and one-click updates
+- ✅ **Enhanced logging system** (v3.3.0): Laravel-compatible log format, improved readability in FreeScout admin interface
+- ✅ **Improved settings validation** (v3.3.0): Real-time format validation for blocked extensions
 - ✅ **Role-based control**: Different blocking modes for administrators vs regular users
 - ✅ **Customizable blocked page**: Page title, message with variables, and gradient colors
 - ✅ **Real-time configuration**: Changes take effect immediately without cache clearing
@@ -447,6 +450,12 @@ For maximum security:
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
+
+### Version 3.3.0 (2026-03-06)
+- Improved settings UI with enlarged input field and real-time validation
+- Enhanced logging system with Laravel-compatible format
+- Fixed false-positive corruption detection for valid 0-byte compressed files
+- Better log readability in FreeScout admin interface
 
 ### Version 3.2.0 (2026-03-01)
 - Multi-format archive scanning: ZIP, RAR, TAR, GZ, BZ2

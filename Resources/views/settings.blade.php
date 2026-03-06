@@ -43,7 +43,8 @@
         <div class="col-sm-6">
             <input
                 type="text"
-                class="form-control input-sized-lg"
+                class="form-control"
+                style="width: 100%; max-width: 800px;"
                 id="blocked_extensions"
                 name="settings[attachmentsecurity.blocked_extensions]"
                 value="{{ $settings['attachmentsecurity.blocked_extensions'] ?? '' }}"
@@ -53,6 +54,9 @@
                 {{ __('Enter comma-separated file extensions to block. Do not include dots.') }}<br/>
                 {{ __('Example:') }} <code>exe,php,bat,cmd,htm,html,js,vbs,ps1,sh,phar</code>
             </p>
+            <span id="blocked_extensions_error" style="color: #d9534f; display: none; font-weight: bold;">
+                ⚠️ Invalid format. Use only letters, numbers and commas (no spaces). Example: exe,php,js
+            </span>
         </div>
     </div>
 

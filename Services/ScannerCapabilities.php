@@ -9,7 +9,7 @@ namespace Modules\AttachmentSecurity\Services;
  * Checks for PHP extensions, external binaries, and their versions.
  *
  * @package Modules\AttachmentSecurity\Services
- * @version 3.2.0
+ * @version 3.3.0
  */
 class ScannerCapabilities
 {

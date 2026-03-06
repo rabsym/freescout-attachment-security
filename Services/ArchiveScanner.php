@@ -12,7 +12,7 @@ use ZipArchive;
  *
  * @package Modules\AttachmentSecurity
  * @author  Raimundo Alba
- * @version 3.2.0
+ * @version 3.3.0
  */
 class ArchiveScanner
 {
@@ -866,20 +866,23 @@ class ArchiveScanner
                 $bytesWritten = 0;
                 $readError = false;
                 $hasReadData = false;
-                
+
+
                 while (!gzeof($gz)) {
                     $data = @gzread($gz, 4096);
-                    
+
                     // Check for read errors
-                    if ($data === false || $data === '') {
-                        // Empty string from gzread can indicate corruption
-                        if (!$hasReadData && gzeof($gz)) {
-                            // File is empty or corrupt - no data read at all
-                            $readError = true;
-                        }
+                    if ($data === false) {
+                        // Read error - file is corrupted
+                        $readError = true;
                         break;
                     }
-                    
+
+                    if ($data === '') {
+                        // Empty data (valid empty file or EOF reached)
+                        break;
+                    }
+
                     $hasReadData = true;
                     $written = fwrite($out, $data);
                     if ($written === false) {
@@ -888,40 +891,51 @@ class ArchiveScanner
                     }
                     $bytesWritten += $written;
                 }
-                
+
+
                 gzclose($gz);
                 fclose($out);
-                
-                // Check if decompression failed or resulted in empty/invalid file
-                if ($readError || $bytesWritten === 0 || !$hasReadData) {
-                    throw new \Exception('GZ file appears to be corrupted, empty, or not in gzip format');
+
+
+                // Check if decompression failed (but allow valid 0-byte files)
+                if ($readError) {
+                    throw new \Exception('GZ file appears to be corrupted or not in valid gzip format');
                 }
-                
+
+                // If 0 bytes were written, it's a valid empty compressed file
+                // Continue processing to check extension (don't throw exception)
+
+
+
             } elseif ($type === 'bz2') {
                 // Decompress .bz2 file
                 $bz = @bzopen($filepath, 'r');
                 if ($bz === false) {
                     throw new \Exception('Cannot open BZ2 file - not in bzip2 format or corrupted');
                 }
-                
+
                 $out = fopen($tempFile, 'wb');
                 $bytesWritten = 0;
                 $readError = false;
                 $hasReadData = false;
-                
+
                 while (!feof($bz)) {
                     $data = @bzread($bz, 4096);
-                    
+
+
                     // Check for read errors
-                    if ($data === false || $data === '') {
-                        // Empty string from bzread can indicate corruption
-                        if (!$hasReadData && feof($bz)) {
-                            // File is empty or corrupt - no data read at all
-                            $readError = true;
-                        }
+                    if ($data === false) {
+                        // Read error - file is corrupted
+                        $readError = true;
                         break;
                     }
-                    
+
+                    if ($data === '') {
+                        // Empty data (valid empty file or EOF reached)
+                        break;
+                    }
+
+
                     $hasReadData = true;
                     $written = fwrite($out, $data);
                     if ($written === false) {
@@ -930,14 +944,19 @@ class ArchiveScanner
                     }
                     $bytesWritten += $written;
                 }
-                
+
                 bzclose($bz);
                 fclose($out);
-                
-                // Check if decompression failed or resulted in empty/invalid file
-                if ($readError || $bytesWritten === 0 || !$hasReadData) {
-                    throw new \Exception('BZ2 file appears to be corrupted, empty, or not in bzip2 format');
+
+
+                // Check if decompression failed (but allow valid 0-byte files)
+                if ($readError) {
+                    throw new \Exception('BZ2 file appears to be corrupted or not in valid bzip2 format');
                 }
+
+                // If 0 bytes were written, it's a valid empty compressed file
+                // Continue processing to check extension (don't throw exception)
+
             }
             
             // Get the original filename without compression extension

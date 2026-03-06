@@ -5,6 +5,7 @@ namespace Modules\AttachmentSecurity\Http\Middleware;
 use Closure;
 use Module;
 use Modules\AttachmentSecurity\Services\ArchiveScanner;
+use Modules\AttachmentSecurity\Logging\LoggerAttachmentSecurity;
 
 /**
  * Attachment Blocker Middleware
@@ -15,7 +16,7 @@ use Modules\AttachmentSecurity\Services\ArchiveScanner;
  *
  * @package Modules\AttachmentSecurity
  * @author  Raimundo Alba
- * @version 3.2.0
+ * @version 3.3.0
  */
 class AttachmentBlocker
 {
@@ -36,20 +37,13 @@ class AttachmentBlocker
      */
     public function handle($request, Closure $next)
     {
-        // Debug logging commented for production
-        // $this->log('DEBUG', 'Middleware handle() called');
-        
+
         // Extract extension
         $path = $request->segment(count($request->segments()));
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        
-        // $this->log('DEBUG', 'Extension extracted', [
-        //     'path' => $path,
-        //     'extension' => $extension
-        // ]);
-        
+
+
         if (empty($extension)) {
-            // $this->log('DEBUG', 'Extension empty, passing to next');
             return $next($request);
         }
 
@@ -57,28 +51,18 @@ class AttachmentBlocker
         \Cache::forget('module_options_attachmentsecurity');
         $blockedExtStr = Module::getOption('attachmentsecurity', 'blocked_extensions', config('attachmentsecurity.blocked_extensions'));
         $blockedExtensions = array_filter(array_map('trim', explode(',', strtolower($blockedExtStr))));
-        
-        // $this->log('DEBUG', 'Blocked extensions loaded', [
-        //     'raw' => $blockedExtStr,
-        //     'array' => $blockedExtensions
-        // ]);
-        
+
         // EXISTING LOGIC: Check if extension is directly blocked
         if (in_array($extension, $blockedExtensions)) {
-            // $this->log('INFO', 'Extension IS blocked, checking mode');
 
             // Check blocking mode
             $blockingMode = Module::getOption('attachmentsecurity', 'blocking_mode', self::MODE_ALL);
-            
-            // $this->log('DEBUG', 'Blocking mode', ['mode' => $blockingMode]);
-            
+
             if ($blockingMode === self::MODE_DISABLED) {
-                // $this->log('INFO', 'Blocking disabled, passing to next');
                 return $next($request);
             }
-            
+
             if ($blockingMode === self::MODE_REGULAR && auth()->check() && auth()->user()->isAdmin()) {
-                // $this->log('INFO', 'User is admin, passing to next');
                 return $next($request);
             }
 
@@ -121,7 +105,6 @@ class AttachmentBlocker
             return $this->handleArchiveScan($request, $path, $extension, $blockedExtensions, $next);
         }
 
-        // $this->log('DEBUG', 'Extension not blocked, passing to next');
         return $next($request);
     }
 
@@ -179,7 +162,7 @@ class AttachmentBlocker
                     return $this->blockDownload($request, $path, $extension, 'unreadable', $result);
                 } else {
                     // Allow mode: log error and allow download (fail-safe)
-                    $this->log('ERROR', 'ARCHIVE SCAN FAILED', [
+                    $this->log('ARCHIVE SCAN FAILED', [
                         'file' => pathinfo($path, PATHINFO_BASENAME),
                         'error' => $result['error']
                     ]);
@@ -203,7 +186,7 @@ class AttachmentBlocker
 
         } catch (\Exception $e) {
             // Any exception during scanning - fail-safe: allow download and log
-            $this->log('ERROR', 'ARCHIVE SCAN EXCEPTION', [
+            $this->log('ARCHIVE SCAN EXCEPTION', [
                 'file' => pathinfo($path, PATHINFO_BASENAME),
                 'exception' => $e->getMessage()
             ]);
@@ -259,7 +242,7 @@ class AttachmentBlocker
             // Encrypted archive block
             $customMessage = Module::getOption('attachmentsecurity', 'encrypted_archive_block_message', config('attachmentsecurity.encrypted_archive_block_message'));
             
-            $this->log('WARNING', 'ENCRYPTED ARCHIVE BLOCKED', [
+            $this->log('ENCRYPTED ARCHIVE BLOCKED', [
                 'user' => $user,
                 'ticket' => $ticketNumber,
                 'file' => $filename
@@ -280,7 +263,7 @@ class AttachmentBlocker
                 return $file['name'];
             }, $scanResult['files']);
 
-            $this->log('WARNING', 'ARCHIVE CONTAINS BLOCKED FILES', [
+            $this->log('ARCHIVE CONTAINS BLOCKED FILES', [
                 'user' => $user,
                 'ticket' => $ticketNumber,
                 'archive' => $filename,
@@ -304,7 +287,7 @@ class AttachmentBlocker
             // Unreadable archive block
             $customMessage = Module::getOption('attachmentsecurity', 'unreadable_archive_block_message', config('attachmentsecurity.unreadable_archive_block_message'));
             
-            $this->log('WARNING', 'UNREADABLE ARCHIVE BLOCKED', [
+            $this->log('UNREADABLE ARCHIVE BLOCKED', [
                 'user' => $user,
                 'ticket' => $ticketNumber,
                 'file' => $filename,
@@ -322,7 +305,7 @@ class AttachmentBlocker
             // Regular extension block (v3.0.0 logic)
             $customMessage = Module::getOption('attachmentsecurity', 'block_message', config('attachmentsecurity.block_message'));
             
-            $this->log('WARNING', 'BLOCKING DOWNLOAD', [
+            $this->log('BLOCKING DOWNLOAD', [
                 'user' => $user,
                 'ticket' => $ticketNumber,
                 'file' => $filename,
@@ -455,27 +438,36 @@ class AttachmentBlocker
 HTML;
     }
 
+
     /**
-     * Log helper method using file_put_contents
+     * Log helper method using LoggerAttachmentSecurity
+     * 
+     * @param string $message Log message
+     * @param array $context Additional context data
      */
-    protected function log($level, $message, $context = [])
+    protected function log($message, $context = [])
     {
-        $logFile = storage_path('logs/attachmentsecurity.log');
-        
-        // Sanitize context to ensure valid UTF-8 for json_encode
+        // Sanitize context to ensure valid UTF-8 and remove problematic characters for log viewers
         if (!empty($context)) {
             array_walk_recursive($context, function(&$value) {
                 if (is_string($value)) {
                     // Remove non-UTF-8 characters and ensure valid encoding
                     $value = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
-                    // Replace any remaining problematic bytes
+                    // Remove control characters that could break log viewers
                     $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/u', '', $value);
+                    // Remove quotes to avoid JSON escaping issues in log viewers
+                    $value = str_replace(['"', "'", '\\'], ['', '', ''], $value);
+                    // Replace problematic keywords that break FreeScout log viewer
+                    $value = str_ireplace('error:', 'error', $value);
                 }
             });
         }
-        
-        $contextStr = !empty($context) ? ' | ' . json_encode($context, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '';
-        $logEntry = "[" . date('Y-m-d H:i:s') . "] [{$level}] [MIDDLEWARE] {$message}{$contextStr}\n";
-        file_put_contents($logFile, $logEntry, FILE_APPEND);
+
+        $contextStr = !empty($context) ? ' ' . json_encode($context, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '';
+        $logEntry = "[MIDDLEWARE] {$message}{$contextStr}";
+
+        LoggerAttachmentSecurity::alert($logEntry);
+
     }
 }
+

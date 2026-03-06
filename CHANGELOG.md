@@ -1,5 +1,27 @@
 # Changelog - Attachment Security Module
 
+## [3.3.0] - 2026-03-06
+
+### 🔧 Improvements
+
+**Settings UI:**
+- Enlarged "Blocked File Extensions" input field for better visibility with long extension lists
+- Added real-time JavaScript validation for blocked extensions format (letters, numbers, and commas only)
+- Prevents form submission with invalid format, avoiding accidental settings reset
+
+**Archive Scanning:**
+- Fixed handling of valid 0-byte files inside compressed archives (GZ, BZ2)
+- Valid empty files are no longer incorrectly flagged as corrupted
+- Empty files with blocked extensions are now correctly blocked by extension, not as corrupted archives
+
+**Logging System:**
+- Implemented new `LoggerAttachmentSecurity` class for standardized logging
+- Changed log format to Laravel-compatible format: `production.LEVEL: message`
+- Improved log readability in FreeScout's admin log viewer interface
+- Better handling of special characters in error messages to prevent log viewer parsing issues
+
+---
+
 ## [3.2.0] - 2026-03-01
 
 ### 🎉 Multi-Format Archive Support (MAJOR UPDATE)
