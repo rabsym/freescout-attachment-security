@@ -1,6 +1,6 @@
 # Attachment Security Module for FreeScout
 
-**Version:** 3.3.0 (Released: March 6, 2026)  
+**Version:** 3.4.0 (Released: March 12, 2026)  
 **Author:** Raimundo Alba  
 **GitHub:** https://github.com/rabsym/freescout-attachment-security  
 **License:** MIT
@@ -13,6 +13,8 @@ The Attachment Security module enhances FreeScout's security by blocking downloa
 
 ### Core Functionality
 - ✅ **Extension-based blocking**: Block downloads by file extension (exe, php, js, etc.)
+- ✅ **Block files without extension** (v3.4.0): Optional blocking of extensionless files (readme, makefile, etc.)
+- ✅ **Email notifications** (v3.4.0): Automated alerts for blocked file incidents (requires SMTP driver) with customizable subject and variables
 - ✅ **Multi-format archive scanning** (v3.2.0): Scan ZIP, RAR, TAR, GZ, and BZ2 files for hidden malicious content
 - ✅ **Automatic detection of supported archive formats** (v3.2.0): System detects available archive handlers and uses the best method
 - ✅ **Enhanced encryption detection** (v3.2.0): Detects both header and content-encrypted archives
@@ -158,7 +160,15 @@ The module will automatically detect and use the best available method. Check th
 ### Settings Location
 **Manage → Settings → Attachment Security**
 
-#### Section 1: Security Configuration
+The settings are organized into three sections:
+
+---
+
+### Section 1: Security Configuration 🔒
+
+Configure file blocking rules and archive scanning behavior.
+
+#### File Extension Blocking
 
 **Blocked File Extensions**
 
@@ -174,127 +184,180 @@ exe,php,bat,cmd,htm,html,js,vbs,ps1,sh,phar,jar,msi
 - **Scripts:** php, js, vbs, phar
 - **Web files:** htm, html
 
+**Block Files Without Extension**
+
+When enabled, blocks files that have no file extension (e.g., readme, makefile, dockerfile).
+- Applies to both direct attachments and files inside compressed archives
+- **Default:** Disabled
+
 ---
 
-**Archive Scanning**
+#### Archive Scanning
 
-Enable or disable scanning of compressed files for blocked file extensions.
+**Enable Archive Scanning**
 
-- **Enabled**: Archive files (ZIP, RAR, TAR, GZ, BZ2) will be scanned for malicious content before allowing download
-- **Disabled**: Archive files are treated as regular files (only blocked if their extension is in the blocked extensions list)
+When enabled, compressed files (ZIP, RAR, TAR, GZ, BZ2) are scanned for blocked file extensions before allowing download.
 
-The system automatically detects which archive formats are available on your server. See "Supported Archive Formats" section in Settings for details.
+- **Enabled**: Scans inside archives for malicious content
+- **Disabled**: Archives treated as regular files (only blocked if archive extension is in blocked list)
+
+The system automatically detects which archive formats are available on your server. See "Supported Archive Formats" in Settings.
 
 **Archive Maximum Nesting Depth**
 
-How many levels deep to scan for nested compressed files:
-- **0 levels**: Scan main archive only, do not scan nested archives
-- **1 level** (recommended): Scan main archive + archives inside it
-- **2 levels**: Scan main archive + archives inside + archives inside those
+Controls how many levels deep to scan for nested compressed files:
+- **0 levels**: Scan main archive only, ignore nested archives
+- **1 level** (recommended): Scan main archive + 1 level of nested archives
+- **2 levels**: Scan main archive + 2 levels of nested archives
 
-This applies to all archive formats and supports multi-format nesting (e.g., RAR inside ZIP inside TAR).
+Supports multi-format nesting (e.g., RAR inside ZIP inside TAR).
 
 **Unreadable Archives**
 
-What to do when an archive cannot be scanned (corrupted file, invalid format, read error):
-- **Block download** (Default, recommended): Maximum security - prevents download of any archive that cannot be scanned
-- **Allow download**: Fail-safe mode - logs the error but permits download
+Behavior when an archive cannot be scanned (corrupted file, invalid format, read error):
+- **Block download** (Default): Maximum security - prevents download
+- **Allow download**: Fail-safe mode - logs error but allows download
 
 ---
 
-**Blocking Mode**
+#### Blocking Mode
 
-Select who should be affected by the blocking rules (applies to both regular files and files inside archives).
+Controls who is affected by the blocking rules (applies to all file types and files inside archives):
 
-#### Section 2: Notifications & Messages
+- **Block for all users** (Default): Maximum security - blocks everyone including administrators
+- **Block for regular users only**: Admins can download any file, regular users cannot download blocked files
+- **Blocking disabled**: Temporarily disable all blocking (useful for testing)
+
+---
+
+### Section 2: Notifications 📧
+
+Configure email alerts for blocked file incidents.
+
+**⚠️ Important:** Email notifications require **SMTP mail driver**. The feature is automatically disabled if using other mail drivers (sendmail, mailgun, etc.).
+
+**Enable Email Notifications**
+
+Toggle to enable/disable email notifications when files are blocked.
+- **Requirement:** SMTP mail driver must be configured in FreeScout
+- **Default:** Disabled
+
+**Notification Email Address**
+
+Email address to receive incident notifications.
+- **Required** when notifications are enabled
+- **Validation:** Must be a valid email format
+
+**Email Subject**
+
+Customize the email subject line for notifications.
+
+**Available variables:**
+- `{user}` - User who attempted the download
+- `{ticket}` - Ticket number
+- `{filename}` - Name of the blocked file
+- `{reason}` - Reason for blocking
+
+**Default subject:**
+```
+FreeScout AttachmentSecurity alert - {user}
+```
+
+**Example subjects:**
+```
+Security Alert: {user} attempted to download {filename}
+Blocked file in ticket #{ticket} - {filename}
+File security incident - {reason}
+```
+
+**Email Content:**
+
+Each notification includes:
+- User email
+- Ticket number
+- Filename
+- Blocking reason (extension blocked, archive with malware, encrypted archive, etc.)
+- Timestamp
+
+---
+
+### Section 3: Messages & Appearance 🎨
+
+Customize the blocked page appearance and user-facing messages.
 
 **Page Title**
 
-The title shown on the blocked page (default: "🚫 Download Blocked")
+Title shown at the top of the blocked page.
+- **Default:** "🚫 Download Blocked"
 
 **Block Message**
 
-Customize the message shown to users when a regular file download is blocked.
+Message shown when a regular file download is blocked.
 
 **Available variables:**
-- `{filename}` - The name of the blocked file
-- `{extension}` - The file extension
-- `{blocked_files}` - Comma-separated list of blocked files (for archives)
+- `{filename}` - Name of the blocked file
+- `{extension}` - File extension
+- `{blocked_files}` - Comma-separated list (for archives)
 
-**Example message:**
-```
-Cannot download {filename}. Files with .{extension} extension are blocked for security reasons. Contact support if you need access to this file.
-```
-
-**Default message:**
+**Default:**
 ```
 For security reasons the file {filename} cannot be downloaded. If you need access to this content, please contact support.
 ```
 
 **Archive Block Message**
 
-Message shown when a compressed file contains blocked files inside.
+Message shown when an archive contains blocked files.
 
 **Available variables:**
-- `{filename}` - The name of the archive file
-- `{blocked_files}` - Comma-separated list of blocked files found inside
+- `{filename}` - Archive name
+- `{blocked_files}` - List of blocked files found inside
 
-**Example message:**
-```
-The archive {filename} contains the following blocked files: {blocked_files}
-```
-
-**Default message:**
+**Default:**
 ```
 The file {filename} contains blocked files: {blocked_files}
 ```
 
 **Encrypted Archive Block Message**
 
-Message shown when a compressed file is password-protected and cannot be scanned.
+Message shown when an archive is password-protected and cannot be scanned.
 
 **Available variables:**
-- `{filename}` - The name of the encrypted archive
+- `{filename}` - Archive name
 
-**Example message:**
-```
-Cannot scan {filename} because it is password-protected.
-```
-
-**Default message:**
+**Default:**
 ```
 The file {filename} is password-protected and cannot be scanned for security reasons.
 ```
 
 **Unreadable Archive Block Message**
 
-Message shown when an archive cannot be scanned (corrupted, invalid format) and "Block download" mode is enabled.
+Message shown when an archive cannot be scanned and "Block download" mode is enabled.
 
 **Available variables:**
-- `{filename}` - The name of the unreadable archive
+- `{filename}` - Archive name
 
-**Example message:**
-```
-The file {filename} could not be scanned and has been blocked for security reasons.
-```
-
-**Default message:**
+**Default:**
 ```
 The file {filename} cannot be scanned because it appears to be corrupted or has an invalid format. For security reasons, the download has been blocked.
 ```
 
-**Background Color**
+**Background Gradient Colors**
 
-Two comma-separated hex color codes for the gradient background (default: "#4A90E2, #5C6AC4")
+Customize the blocked page background with two hex color codes (comma-separated).
 
 **Examples:**
-- Blue: `#4A90E2, #5C6AC4`
-- Purple: `#667eea, #764ba2`
-- Green: `#11998e, #38ef7d`
+- **Blue** (Default): `#4A90E2, #5C6AC4`
+- **Purple:** `#667eea, #764ba2`
+- **Green:** `#11998e, #38ef7d`
+- **Red:** `#eb3349, #f45c43`
 
-**Reset to Defaults**
+---
 
-Click this button to restore all settings to their default values.
+### Reset to Defaults
+
+Click the "Reset to Defaults" button to restore all settings to their default values.
+
+---
 
 ## Technical Details
 
@@ -341,35 +404,47 @@ storage/logs/attachmentsecurity.log
 
 **Configuration changes:**
 ```
-[2026-02-27 10:30:15] [INFO] [SERVICEPROVIDER] Configuration saved - Blocked Extensions: exe,php,bat | Block Mode: all | Archive Scan: enabled | Nesting Depth: 1 | Unreadable Archives: block | Archive Formats: zip(native), rar(nonfree), tar(native), gz(native), bz2(native)
+[2026-03-12 10:30:15] attachmentsecurity.ALERT: [SERVICEPROVIDER] CONFIGURATION SAVED - Blocked Extensions: exe,php,bat | Block No Extension: disabled | Block Mode: all | Archive Scan: enabled | Nesting Depth: 1 | Unreadable Archives: block | Email Notifications: enabled | Notification Email: security@example.com | Supported Archive Formats: zip(native), rar(nonfree), tar(native), gz(native), bz2(native)
 ```
 
 **Regular blocked download:**
 ```
-[2026-02-27 10:35:22] [WARNING] [MIDDLEWARE] BLOCKING DOWNLOAD | {"user":"user@example.com","ticket":"1523","file":"malware.exe","extension":"exe"}
+[2026-03-12 10:35:22] attachmentsecurity.ALERT: [MIDDLEWARE] BLOCKING DOWNLOAD {"user":"user@example.com","ticket":1523,"file":"malware.exe","extension":"exe"}
+```
+
+**File without extension blocked:**
+```
+[2026-03-12 10:36:45] attachmentsecurity.ALERT: [MIDDLEWARE] FILE WITHOUT EXTENSION BLOCKED {"user":"user@example.com","ticket":1524,"file":"readme"}
 ```
 
 **Archive with blocked content:**
 ```
-[2026-02-27 10:40:15] [WARNING] [MIDDLEWARE] ARCHIVE CONTAINS BLOCKED FILES | {"user":"user@example.com","ticket":"1524","archive":"malware.rar","blocked_files":["virus.exe","trojan.bat"],"nesting_level":1}
+[2026-03-12 10:40:15] attachmentsecurity.ALERT: [MIDDLEWARE] ARCHIVE CONTAINS BLOCKED FILES {"user":"user@example.com","ticket":1525,"archive":"malware.rar","blocked_files":["virus.exe","trojan.bat"],"nesting_level":1}
 ```
 
 **Encrypted archive blocked:**
 ```
-[2026-02-27 10:42:30] [WARNING] [MIDDLEWARE] ENCRYPTED ARCHIVE BLOCKED | {"user":"user@example.com","ticket":"1525","file":"protected.rar"}
+[2026-03-12 10:42:30] attachmentsecurity.ALERT: [MIDDLEWARE] ENCRYPTED ARCHIVE BLOCKED {"user":"user@example.com","ticket":1526,"file":"protected.rar"}
 ```
 
 **Unreadable archive blocked (Block mode - default):**
 ```
-[2026-02-22 10:45:00] [WARNING] [MIDDLEWARE] UNREADABLE ARCHIVE BLOCKED | {"user":"user@example.com","ticket":"1526","file":"corrupted.zip","error":"Cannot open ZIP file"}
+[2026-03-12 10:45:00] attachmentsecurity.ALERT: [MIDDLEWARE] UNREADABLE ARCHIVE BLOCKED {"user":"user@example.com","ticket":1527,"file":"corrupted.zip","error":"Cannot open ZIP file"}
 ```
 
 **Archive scan error (Allow mode enabled):**
 ```
-[2026-02-22 10:50:00] [ERROR] [MIDDLEWARE] ARCHIVE SCAN FAILED | {"file":"corrupted.zip","error":"Cannot open ZIP file"}
+[2026-03-12 10:50:00] attachmentsecurity.ALERT: [MIDDLEWARE] ARCHIVE SCAN FAILED {"file":"corrupted.zip","error":"Cannot open ZIP file"}
+```
+
+**Email notification validation (when not using SMTP):**
+```
+[2026-03-12 11:00:00] attachmentsecurity.ALERT: [SETTINGS] Email notifications disabled: SMTP driver required (current driver: sendmail)
 ```
 
 The ticket number is obtained from the attachment's conversation (using the `?id=` parameter in the URL).
+
+**Note:** Email notifications are sent silently without logging to avoid cluttering logs. Only validation errors are logged.
 
 ### Viewing Logs
 
@@ -379,6 +454,9 @@ tail -50 /var/www/html/storage/logs/attachmentsecurity.log
 
 # Monitor logs in real-time
 tail -f /var/www/html/storage/logs/attachmentsecurity.log
+
+# View from FreeScout admin interface
+Manage → Logs → Select attachmentsecurity.log
 ```
 
 ## GitHub Repository
@@ -450,6 +528,13 @@ For maximum security:
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
+
+### Version 3.4.0 (2026-03-12)
+- Block files without extension (readme, makefile, etc.)
+- Email notification system for blocked file incidents (requires SMTP)
+- Customizable email subject with variables: {user}, {ticket}, {filename}, {reason}
+- Reorganized settings UI into three clear sections
+- Better visual organization with subsection headers and icons
 
 ### Version 3.3.0 (2026-03-06)
 - Improved settings UI with enlarged input field and real-time validation

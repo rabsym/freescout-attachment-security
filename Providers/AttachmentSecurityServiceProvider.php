@@ -16,7 +16,7 @@ use Module;
  *
  * @package Modules\AttachmentSecurity
  * @author  Raimundo Alba
- * @version 3.3.0
+ * @version 3.4.0
  */
 class AttachmentSecurityServiceProvider extends ServiceProvider
 {
@@ -264,7 +264,34 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
                 config('attachmentsecurity.unreadable_archive_block_message')
             );
 
+            // v3.4.0: Block files without extension
+            $blockNoExtension = Module::getOption(
+                self::MODULE_ALIAS,
+                'block_no_extension',
+                config('attachmentsecurity.block_no_extension')
+            );
+
+            // v3.4.0: Email notifications
+            $emailNotificationsEnabled = Module::getOption(
+                self::MODULE_ALIAS,
+                'email_notifications_enabled',
+                config('attachmentsecurity.email_notifications_enabled')
+            );
+
+            $notificationEmail = Module::getOption(
+                self::MODULE_ALIAS,
+                'notification_email',
+                config('attachmentsecurity.notification_email')
+            );
+
+            $notificationSubject = Module::getOption(
+                self::MODULE_ALIAS,
+                'notification_subject',
+                config('attachmentsecurity.notification_subject')
+            );
+
             $settings[self::SETTINGS_SECTION . '.blocked_extensions'] = $blockedExtensions;
+            $settings[self::SETTINGS_SECTION . '.block_no_extension'] = $blockNoExtension;
             $settings[self::SETTINGS_SECTION . '.blocking_mode'] = $blockingMode;
             $settings[self::SETTINGS_SECTION . '.block_message'] = $blockMessage;
             $settings[self::SETTINGS_SECTION . '.page_title'] = $pageTitle;
@@ -276,6 +303,9 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
             $settings[self::SETTINGS_SECTION . '.encrypted_archive_block_message'] = $encryptedArchiveBlockMessage;
             $settings[self::SETTINGS_SECTION . '.unreadable_archives_mode'] = $unreadableArchivesMode;
             $settings[self::SETTINGS_SECTION . '.unreadable_archive_block_message'] = $unreadableArchiveBlockMessage;
+            $settings[self::SETTINGS_SECTION . '.email_notifications_enabled'] = $emailNotificationsEnabled;
+            $settings[self::SETTINGS_SECTION . '.notification_email'] = $notificationEmail;
+            $settings[self::SETTINGS_SECTION . '.notification_subject'] = $notificationSubject;
 
             // Get archive format capabilities
             $capabilities = $this->getArchiveCapabilities();
@@ -286,6 +316,9 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
             $settings['_archive_capabilities'] = $capabilities;
             $settings['_available_archive_formats'] = $availableFormats;
             $settings['_archive_capabilities_scanned_at'] = $lastScanDate;
+            
+            // Pass mail driver from FreeScout global options for email notification validation
+            $settings['_mail_driver'] = \Option::get('mail_driver', 'smtp');
 
             return $settings;
         }, 20, 2);
@@ -345,6 +378,18 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
             $unreadableArchivesMode = $settingsData[self::SETTINGS_SECTION . '.unreadable_archives_mode'] ?? config('attachmentsecurity.unreadable_archives_mode');
             $unreadableArchiveBlockMessage = $settingsData[self::SETTINGS_SECTION . '.unreadable_archive_block_message'] ?? config('attachmentsecurity.unreadable_archive_block_message');
 
+            // v3.4.0: Block files without extension
+            $blockNoExtension = isset($settingsData[self::SETTINGS_SECTION . '.block_no_extension']) 
+                ? (bool)$settingsData[self::SETTINGS_SECTION . '.block_no_extension'] 
+                : false;
+
+            // v3.4.0: Email notifications
+            $emailNotificationsEnabled = isset($settingsData[self::SETTINGS_SECTION . '.email_notifications_enabled']) 
+                ? (bool)$settingsData[self::SETTINGS_SECTION . '.email_notifications_enabled'] 
+                : false;
+            $notificationEmail = $settingsData[self::SETTINGS_SECTION . '.notification_email'] ?? '';
+            $notificationSubject = $settingsData[self::SETTINGS_SECTION . '.notification_subject'] ?? config('attachmentsecurity.notification_subject');
+
             // Validate blocking mode
             $validModes = [self::MODE_ALL, self::MODE_REGULAR, self::MODE_DISABLED];
             if (!in_array($blockingMode, $validModes)) {
@@ -355,6 +400,36 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
             $validUnreadableModes = [self::UNREADABLE_MODE_BLOCK, self::UNREADABLE_MODE_ALLOW];
             if (!in_array($unreadableArchivesMode, $validUnreadableModes)) {
                 $unreadableArchivesMode = config('attachmentsecurity.unreadable_archives_mode');
+            }
+
+            // v3.4.0: Validate email notifications
+            // Email notifications require SMTP mail driver
+            $mailDriver = \Option::get('mail_driver');
+            
+            if ($emailNotificationsEnabled) {
+                // Check if mail driver is SMTP
+                if ($mailDriver !== 'smtp') {
+                    // Force disable notifications if not using SMTP
+                    $emailNotificationsEnabled = false;
+                    LoggerAttachmentSecurity::alert('[SETTINGS] Email notifications disabled: SMTP driver required (current driver: ' . ($mailDriver ?: 'not configured') . ')');
+                }
+                // If using SMTP, validate email
+                elseif ($emailNotificationsEnabled) {
+                    $notificationEmail = trim($notificationEmail);
+                    
+                    // Check if email is empty
+                    if (empty($notificationEmail)) {
+                        // Force disable notifications if no email
+                        $emailNotificationsEnabled = false;
+                        LoggerAttachmentSecurity::alert('[SETTINGS] Email notifications disabled: no email address provided');
+                    }
+                    // Check if email format is valid
+                    elseif (!filter_var($notificationEmail, FILTER_VALIDATE_EMAIL)) {
+                        // Force disable notifications if invalid email
+                        $emailNotificationsEnabled = false;
+                        LoggerAttachmentSecurity::alert('[SETTINGS] Email notifications disabled: invalid email format - ' . $notificationEmail);
+                    }
+                }
             }
 
             // Save blocked extensions
@@ -435,8 +510,43 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
                 $unreadableArchiveBlockMessage
             );
 
+            // v3.4.0: Save block_no_extension setting
+            Module::setOption(
+                self::MODULE_ALIAS,
+                'block_no_extension',
+                $blockNoExtension
+            );
+
+            // v3.4.0: Save email notification settings
+            Module::setOption(
+                self::MODULE_ALIAS,
+                'email_notifications_enabled',
+                $emailNotificationsEnabled
+            );
+
+            Module::setOption(
+                self::MODULE_ALIAS,
+                'notification_email',
+                $notificationEmail
+            );
+
+            Module::setOption(
+                self::MODULE_ALIAS,
+                'notification_subject',
+                $notificationSubject
+            );
+
             // Log the configuration change
-            $this->logConfigurationChange($blockedExtensions, $blockingMode, $archiveScanEnabled, $maxNestingDepth, $unreadableArchivesMode);
+            $this->logConfigurationChange(
+                $blockedExtensions, 
+                $blockingMode, 
+                $archiveScanEnabled, 
+                $maxNestingDepth, 
+                $unreadableArchivesMode,
+                $blockNoExtension,
+                $emailNotificationsEnabled,
+                $notificationEmail
+            );
 
             return $request;
         }, 20, 3);
@@ -450,9 +560,21 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
      * @param bool $archiveScanEnabled  Archive scan status
      * @param int $maxNestingDepth      Maximum nesting depth
      * @param string $unreadableArchivesMode Unreadable archives mode (block, allow)
+     * @param bool $blockNoExtension    Block files without extension
+     * @param bool $emailNotificationsEnabled Email notifications status
+     * @param string $notificationEmail Email address for notifications
      * @return void
      */
-    protected function logConfigurationChange($blockedExtensions, $blockingMode, $archiveScanEnabled = false, $maxNestingDepth = 1, $unreadableArchivesMode = 'block')
+    protected function logConfigurationChange(
+        $blockedExtensions, 
+        $blockingMode, 
+        $archiveScanEnabled = false, 
+        $maxNestingDepth = 1, 
+        $unreadableArchivesMode = 'block',
+        $blockNoExtension = false,
+        $emailNotificationsEnabled = false,
+        $notificationEmail = ''
+    )
     {
         $logFile = storage_path('logs/attachmentsecurity.log');
         
@@ -475,12 +597,15 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
 
         LoggerAttachmentSecurity::info(
             '[SERVICEPROVIDER] CONFIGURATION SAVED - ' . sprintf(
-                "Blocked Extensions: %s | Block Mode: %s | Archive Scan: %s | Nesting Depth: %d | Unreadable Archives: %s | Supported Archive Formats: %s",
+                "Blocked Extensions: %s | Block No Extension: %s | Block Mode: %s | Archive Scan: %s | Nesting Depth: %d | Unreadable Archives: %s | Email Notifications: %s%s | Supported Archive Formats: %s",
                 $blockedExtensions ?: 'none',
+                $blockNoExtension ? 'enabled' : 'disabled',
                 $blockingMode,
                 $archiveScanEnabled ? 'enabled' : 'disabled',
                 $maxNestingDepth,
                 $unreadableArchivesMode,
+                $emailNotificationsEnabled ? 'enabled' : 'disabled',
+                $emailNotificationsEnabled ? " | Notification Email: $notificationEmail" : '',
                 $formatsString
             )
         );

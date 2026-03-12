@@ -97,3 +97,110 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+
+// Email Notification Validation
+document.addEventListener('DOMContentLoaded', function() {
+
+    const emailEnabledCheckbox = document.getElementById('email_notifications_enabled');
+    const emailInput = document.getElementById('notification_email');
+    const emailError = document.getElementById('notification_email_error');
+    const emailWarning = document.getElementById('notification_email_warning');
+    const form = emailInput ? emailInput.closest('form') : null;
+
+    // Skip if elements don't exist
+    if (!emailEnabledCheckbox || !emailInput || !form) {
+        return;
+    }
+
+    // Check mail driver from data attribute
+    const mailDriver = emailEnabledCheckbox.getAttribute('data-mail-driver');
+    const isSmtp = (mailDriver === 'smtp');
+
+    // If not SMTP, ensure checkbox stays disabled
+    if (!isSmtp) {
+        emailEnabledCheckbox.disabled = true;
+        emailEnabledCheckbox.checked = false;
+        return; // Exit early, no validation needed
+    }
+
+    // Update warning visibility when checkbox changes
+    emailEnabledCheckbox.addEventListener('change', function() {
+        updateEmailWarning();
+    });
+
+    // Real-time email validation
+    emailInput.addEventListener('input', function() {
+        validateEmail(true);
+        updateEmailWarning();
+    });
+
+    // Validation on form submit
+    form.addEventListener('submit', function(e) {
+        // Only validate if notifications are enabled
+        if (emailEnabledCheckbox.checked) {
+            const emailValue = emailInput.value.trim();
+            
+            // If notifications enabled, email is REQUIRED
+            if (emailValue === '') {
+                e.preventDefault();
+                emailError.textContent = '⚠️ Email address is required when notifications are enabled';
+                emailError.style.display = 'block';
+                emailInput.style.borderColor = '#d9534f';
+                emailInput.focus();
+                return false;
+            }
+            
+            // Validate email format
+            if (!validateEmail(true)) {
+                e.preventDefault();
+                emailInput.focus();
+                return false;
+            }
+        }
+    });
+
+    function validateEmail(showError) {
+        const value = emailInput.value.trim();
+        
+        // If checking from submit and notifications are enabled, empty is NOT valid
+        // But during typing, we don't want to show error immediately on empty
+        if (value === '') {
+            if (showError) {
+                emailError.style.display = 'none';
+                emailInput.style.borderColor = '';
+            }
+            return !emailEnabledCheckbox.checked; // Only valid if notifications disabled
+        }
+        
+        // Basic email regex
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        if (!regex.test(value)) {
+            if (showError) {
+                emailError.textContent = '⚠️ Invalid email format. Example: security@example.com';
+                emailError.style.display = 'block';
+                emailInput.style.borderColor = '#d9534f';
+            }
+            return false;
+        } else {
+            if (showError) {
+                emailError.style.display = 'none';
+                emailInput.style.borderColor = '#5cb85c'; // Green border for valid
+            }
+            return true;
+        }
+    }
+
+    function updateEmailWarning() {
+        // Show warning if notifications enabled but no valid email
+        if (emailEnabledCheckbox.checked && emailInput.value.trim() === '') {
+            emailWarning.style.display = 'inline';
+        } else {
+            emailWarning.style.display = 'none';
+        }
+    }
+
+    // Initial check
+    updateEmailWarning();
+});

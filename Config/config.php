@@ -8,7 +8,7 @@
  *
  * @package Modules\AttachmentSecurity
  * @author  Raimundo Alba
- * @version 3.3.0
+ * @version 3.4.0
  */
 
 return [
@@ -22,6 +22,17 @@ return [
     |
     */
     'blocked_extensions' => 'exe,php,bat,cmd,htm,html,js,vbs,ps1,sh,phar',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Block Files Without Extension
+    |--------------------------------------------------------------------------
+    |
+    | Block files that have no file extension (e.g., readme, makefile).
+    | Applies to both direct attachments and files inside archives.
+    |
+    */
+    'block_no_extension' => false,
 
     /*
     |--------------------------------------------------------------------------
@@ -86,5 +97,20 @@ return [
     'max_nesting_depth' => 1,
 
     'unreadable_archives_mode' => 'block',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Email Notifications
+    |--------------------------------------------------------------------------
+    |
+    | Send email alerts when files are blocked.
+    | Uses FreeScout's existing SMTP configuration.
+    |
+    */
+    'email_notifications_enabled' => false,
+
+    'notification_email' => '',
+
+    'notification_subject' => 'FreeScout AttachmentSecurity alert - {user}',
 
 ];

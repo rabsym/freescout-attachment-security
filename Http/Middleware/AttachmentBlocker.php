@@ -16,7 +16,7 @@ use Modules\AttachmentSecurity\Logging\LoggerAttachmentSecurity;
  *
  * @package Modules\AttachmentSecurity
  * @author  Raimundo Alba
- * @version 3.3.0
+ * @version 3.4.0
  */
 class AttachmentBlocker
 {
@@ -41,7 +41,26 @@ class AttachmentBlocker
         // Extract extension
         $path = $request->segment(count($request->segments()));
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $filename = pathinfo($path, PATHINFO_BASENAME);
 
+        // Check if file has no extension and blocking is enabled
+        $blockNoExtension = Module::getOption('attachmentsecurity', 'block_no_extension', config('attachmentsecurity.block_no_extension'));
+        
+        if (empty($extension) && $blockNoExtension) {
+            // File has no extension and blocking is enabled
+            $blockingMode = Module::getOption('attachmentsecurity', 'blocking_mode', self::MODE_ALL);
+
+            if ($blockingMode === self::MODE_DISABLED) {
+                return $next($request);
+            }
+
+            if ($blockingMode === self::MODE_REGULAR && auth()->check() && auth()->user()->isAdmin()) {
+                return $next($request);
+            }
+
+            // Block this file (no extension)
+            return $this->blockDownload($request, $path, '', 'no_extension');
+        }
 
         if (empty($extension)) {
             return $next($request);
@@ -200,7 +219,7 @@ class AttachmentBlocker
      * @param \Illuminate\Http\Request $request
      * @param string $path File path
      * @param string $extension File extension
-     * @param string $blockType Type: 'regular', 'encrypted', 'archive', 'unreadable'
+     * @param string $blockType Type: 'regular', 'encrypted', 'archive', 'unreadable', 'no_extension'
      * @param array|null $scanResult Scan result for archive/unreadable blocks
      * @return void
      */
@@ -237,8 +256,32 @@ class AttachmentBlocker
             }
         }
 
-        // Determine message and log based on block type
-        if ($blockType === 'encrypted') {
+        // Determine message, log, and email reason based on block type
+        $emailReason = '';
+        
+        if ($blockType === 'no_extension') {
+            // File without extension block
+            $customMessage = Module::getOption('attachmentsecurity', 'block_message', config('attachmentsecurity.block_message'));
+            
+            $this->log('FILE WITHOUT EXTENSION BLOCKED', [
+                'user' => $user,
+                'ticket' => $ticketNumber,
+                'file' => $filename
+            ]);
+
+            $emailReason = 'File has no extension';
+            
+            $safeMessage = htmlspecialchars($customMessage, ENT_QUOTES, 'UTF-8');
+            $message = str_replace(
+                ['{filename}', '{extension}'],
+                [
+                    '<span style="color: #000; font-weight: bold;">' . htmlspecialchars($filename) . '</span>',
+                    '<span style="color: #000; font-weight: bold;">no extension</span>'
+                ],
+                $safeMessage
+            );
+            
+        } elseif ($blockType === 'encrypted') {
             // Encrypted archive block
             $customMessage = Module::getOption('attachmentsecurity', 'encrypted_archive_block_message', config('attachmentsecurity.encrypted_archive_block_message'));
             
@@ -247,6 +290,8 @@ class AttachmentBlocker
                 'ticket' => $ticketNumber,
                 'file' => $filename
             ]);
+
+            $emailReason = 'Encrypted archive - cannot be scanned';
 
             $safeMessage = htmlspecialchars($customMessage, ENT_QUOTES, 'UTF-8');
             $message = str_replace(
@@ -271,8 +316,10 @@ class AttachmentBlocker
                 'nesting_level' => $scanResult['nesting_level']
             ]);
 
-            $safeMessage = htmlspecialchars($customMessage, ENT_QUOTES, 'UTF-8');
             $blockedFilesStr = implode(', ', $blockedFileNames);
+            $emailReason = 'Archive contains blocked files: ' . $blockedFilesStr;
+
+            $safeMessage = htmlspecialchars($customMessage, ENT_QUOTES, 'UTF-8');
             
             $message = str_replace(
                 ['{filename}', '{blocked_files}'],
@@ -287,12 +334,16 @@ class AttachmentBlocker
             // Unreadable archive block
             $customMessage = Module::getOption('attachmentsecurity', 'unreadable_archive_block_message', config('attachmentsecurity.unreadable_archive_block_message'));
             
+            $errorMsg = $scanResult['error'] ?? 'Unknown error';
+            
             $this->log('UNREADABLE ARCHIVE BLOCKED', [
                 'user' => $user,
                 'ticket' => $ticketNumber,
                 'file' => $filename,
-                'error' => $scanResult['error'] ?? 'Unknown error'
+                'error' => $errorMsg
             ]);
+
+            $emailReason = 'Unreadable/corrupted archive: ' . $errorMsg;
 
             $safeMessage = htmlspecialchars($customMessage, ENT_QUOTES, 'UTF-8');
             $message = str_replace(
@@ -312,6 +363,8 @@ class AttachmentBlocker
                 'extension' => $extension
             ]);
 
+            $emailReason = 'Blocked extension: .' . $extension;
+
             $safeMessage = htmlspecialchars($customMessage, ENT_QUOTES, 'UTF-8');
             $message = str_replace(
                 ['{filename}', '{extension}'],
@@ -322,6 +375,9 @@ class AttachmentBlocker
                 $safeMessage
             );
         }
+
+        // Send email notification
+        $this->sendEmailNotification($user, $ticketNumber, $filename, $emailReason);
 
         // Get page customization
         $pageTitle = Module::getOption('attachmentsecurity', 'page_title', '🚫 Download Blocked');
@@ -438,6 +494,143 @@ class AttachmentBlocker
 HTML;
     }
 
+
+    /**
+     * Send email notification when a file is blocked
+     * 
+     * @param string $user User email
+     * @param string $ticketNumber Ticket number
+     * @param string $filename Blocked filename
+     * @param string $reason Blocking reason
+     */
+    protected function sendEmailNotification($user, $ticketNumber, $filename, $reason)
+    {
+        try {
+            // Check if notifications are enabled
+            $emailEnabled = Module::getOption('attachmentsecurity', 'email_notifications_enabled', config('attachmentsecurity.email_notifications_enabled'));
+            
+            if (!$emailEnabled) {
+                $this->log('EMAIL NOTIFICATION SKIPPED', [
+                    'reason' => 'Email notifications are disabled'
+                ]);
+                return;
+            }
+
+            // Get notification email
+            $notificationEmail = Module::getOption('attachmentsecurity', 'notification_email', config('attachmentsecurity.notification_email'));
+            
+            if (empty($notificationEmail) || !filter_var($notificationEmail, FILTER_VALIDATE_EMAIL)) {
+                $this->log('EMAIL NOTIFICATION SKIPPED', [
+                    'reason' => 'No valid email configured',
+                    'configured_email' => $notificationEmail
+                ]);
+                return;
+            }
+
+            // Get email subject template
+            $subjectTemplate = Module::getOption('attachmentsecurity', 'notification_subject', config('attachmentsecurity.notification_subject'));
+            
+            // Replace variables in subject
+            $subject = str_replace(
+                ['{user}', '{ticket}', '{filename}', '{reason}'],
+                [$user, $ticketNumber, $filename, $reason],
+                $subjectTemplate
+            );
+
+            // Build email body
+            $body = $this->buildEmailBody($user, $ticketNumber, $filename, $reason);
+
+            // CRITICAL: Force load SMTP configuration from FreeScout's database
+            // Laravel defaults to sendmail, but FreeScout stores SMTP in options table
+            $mailDriver = \Option::get('mail_driver', 'smtp');
+            $mailHost = \Option::get('mail_host');
+            $mailPort = \Option::get('mail_port', 587);
+            $mailUsername = \Option::get('mail_username');
+            $mailPassword = \Option::get('mail_password');
+            $mailEncryption = \Option::get('mail_encryption', 'tls');
+            $mailFromAddress = \Option::get('mail_from');
+            $mailFromName = \Option::get('mail_from_name', 'FreeScout');
+            
+            // Decrypt password if encrypted (FreeScout stores passwords encrypted)
+            if ($mailPassword && strpos($mailPassword, 'eyJ') === 0) {
+                try {
+                    $mailPassword = decrypt($mailPassword);
+                } catch (\Exception $e) {
+                    // Silent fail - password decryption failed
+                    return;
+                }
+            }
+            
+            // Fallback: use username as FROM if FROM address is empty
+            if (empty($mailFromAddress) && !empty($mailUsername)) {
+                $mailFromAddress = $mailUsername;
+            }
+            
+            // Set mail configuration from database
+            config([
+                'mail.driver' => $mailDriver,
+                'mail.host' => $mailHost,
+                'mail.port' => $mailPort,
+                'mail.username' => $mailUsername,
+                'mail.password' => $mailPassword,
+                'mail.encryption' => $mailEncryption,
+                'mail.from' => [
+                    'address' => $mailFromAddress,
+                    'name' => $mailFromName,
+                ],
+            ]);
+
+            // Send email silently (no logging except PHP errors)
+            try {
+                \Mail::raw($body, function($message) use ($notificationEmail, $subject, $mailFromAddress, $mailFromName) {
+                    $message->to($notificationEmail)
+                           ->subject($subject);
+                    
+                    // Set FROM address (required by SMTP)
+                    if ($mailFromAddress) {
+                        $message->from($mailFromAddress, $mailFromName);
+                    }
+                });
+            } catch (\Exception $e) {
+                // Silent fail - email sending failed
+            }
+
+        } catch (\Exception $e) {
+            // Silent fail - outer exception
+        }
+    }
+
+    /**
+     * Build email notification body
+     * 
+     * @param string $user User email
+     * @param string $ticketNumber Ticket number
+     * @param string $filename Blocked filename
+     * @param string $reason Blocking reason
+     * @return string
+     */
+    protected function buildEmailBody($user, $ticketNumber, $filename, $reason)
+    {
+        $timestamp = date('Y-m-d H:i:s');
+        
+        return <<<EMAIL
+File Download Incident Report
+========================================
+
+A file download attempt was blocked by the Attachment Security module.
+
+Incident Details:
+-----------------
+User:           {$user}
+Ticket:         #{$ticketNumber}
+Filename:       {$filename}
+Reason:         {$reason}
+Date/Time:      {$timestamp}
+
+========================================
+This is an automated notification from FreeScout Attachment Security Module.
+EMAIL;
+    }
 
     /**
      * Log helper method using LoggerAttachmentSecurity

@@ -6,6 +6,27 @@ use Monolog\Logger as MonologLogger;
 use Monolog\Handler\StreamHandler;
 use Monolog\Formatter\LineFormatter;
 
+/**
+ * Attachment Security Logger Helper
+ *
+ * Custom logging helper for the Attachment Security module.
+ * Provides consistent logging to a dedicated log file (attachmentsecurity.log)
+ * with Laravel-compatible format for better integration with FreeScout's admin interface.
+ *
+ * Features:
+ * - Singleton pattern for consistent logger instance
+ * - Laravel-compatible log format: [datetime] channel.LEVEL: message
+ * - Dedicated log file: storage/logs/attachmentsecurity.log
+ * - Support for all standard log levels (debug, info, notice, warning, error, critical, alert, emergency)
+ * - Optional message prefix for module identification
+ *
+ * @package  Modules\AttachmentSecurity
+ * @category Logging
+ * @author   Raimundo Alba
+ * @license  MIT
+ * @version  3.4.0
+ * @since    3.3.0
+ */
 class LoggerAttachmentSecurity
 {
     /**

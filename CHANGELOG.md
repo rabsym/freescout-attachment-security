@@ -1,5 +1,34 @@
 # Changelog - Attachment Security Module
 
+## [3.4.0] - 2026-03-12
+
+### 🆕 New Features
+
+**File Extension Handling:**
+- Added option to block files without extension (readme, makefile, etc.)
+- Applies to both direct attachments and files inside compressed archives
+- Configurable via checkbox in Settings (disabled by default)
+
+**Email Notifications:**
+- Added email notification system for blocked file incidents (requires SMTP driver)
+- Configurable notification email address
+- Customizable email subject with variables: {user}, {ticket}, {filename}, {reason}
+- Default subject: "FreeScout AttachmentSecurity alert - {user}"
+- Uses FreeScout's existing SMTP configuration
+- Enable/disable notifications via checkbox
+- One email per incident with full details: user, filename, ticket, blocking reason, timestamp
+- Automatic validation: notifications only available with SMTP mail driver
+
+**Settings UI Improvements:**
+- Reorganized settings into three clear sections:
+  - Security Configuration (file extension blocking and archive scanning options)
+  - Notifications (email alerts configuration with SMTP requirement)
+  - Messages & Appearance (user-facing messages and styling)
+- Better visual organization with subsection headers and icons
+- Real-time validation for email notifications
+
+---
+
 ## [3.3.0] - 2026-03-06
 
 ### 🔧 Improvements

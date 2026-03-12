@@ -12,7 +12,7 @@ use ZipArchive;
  *
  * @package Modules\AttachmentSecurity
  * @author  Raimundo Alba
- * @version 3.3.0
+ * @version 3.4.0
  */
 class ArchiveScanner
 {
@@ -65,6 +65,32 @@ class ArchiveScanner
         
         return isset($this->capabilities[$capabilityKey]) && 
                ($this->capabilities[$capabilityKey]['available'] ?? false);
+    }
+
+    /**
+     * Check if a file should be blocked
+     *
+     * @param string $filename Filename
+     * @param array $blockedExtensions Array of blocked extensions
+     * @return bool
+     */
+    protected function isFileBlocked(string $filename, array $blockedExtensions): bool
+    {
+        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
+        // Check if extension is in blocked list
+        if (in_array($extension, $blockedExtensions)) {
+            return true;
+        }
+        
+        // Check if file has no extension and block_no_extension is enabled
+        $blockNoExtension = \Module::getOption('attachmentsecurity', 'block_no_extension', config('attachmentsecurity.block_no_extension'));
+        
+        if (empty($extension) && $blockNoExtension) {
+            return true;
+        }
+        
+        return false;
     }
 
     /**
@@ -213,16 +239,16 @@ class ArchiveScanner
                     continue;
                 }
 
-                $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-
-                // Check if this file has a blocked extension
-                if (in_array($extension, $blockedExtensions)) {
+                // Check if this file should be blocked (extension or no extension)
+                if ($this->isFileBlocked($filename, $blockedExtensions)) {
                     $blockedFiles[] = [
                         'name' => basename($filename),
                         'path' => $filename,
                         'depth' => $currentDepth
                     ];
                 }
+
+                $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
                 // If it's a nested archive (any format)
                 if (in_array($extension, ['zip', 'rar', 'tar', 'gz', 'bz2', 'tgz', 'tbz2', 'tb2'])) {
@@ -440,16 +466,16 @@ class ArchiveScanner
                 $line = trim($line);
                 if (empty($line)) continue;
                 
-                $extension = strtolower(pathinfo($line, PATHINFO_EXTENSION));
-                
-                // Check if blocked
-                if (in_array($extension, $blockedExtensions)) {
+                // Check if this file should be blocked (extension or no extension)
+                if ($this->isFileBlocked($line, $blockedExtensions)) {
                     $blockedFiles[] = [
                         'name' => basename($line),
                         'path' => $line,
                         'depth' => $currentDepth
                     ];
                 }
+                
+                $extension = strtolower(pathinfo($line, PATHINFO_EXTENSION));
                 
                 // Check for nested archives (any format)
                 if (in_array($extension, ['rar', 'zip', 'tar', 'gz', 'bz2', 'tgz', 'tbz2', 'tb2'])) {
@@ -601,16 +627,16 @@ class ArchiveScanner
                 
                 if (empty($filename)) continue;
                 
-                $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-                
-                // Check if blocked
-                if (in_array($extension, $blockedExtensions)) {
+                // Check if this file should be blocked (extension or no extension)
+                if ($this->isFileBlocked($filename, $blockedExtensions)) {
                     $blockedFiles[] = [
                         'name' => basename($filename),
                         'path' => $filename,
                         'depth' => $currentDepth
                     ];
                 }
+                
+                $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
                 
                 // Check for nested archives (any format)
                 if (in_array($extension, ['rar', 'zip', 'tar', 'gz', 'bz2', 'tgz', 'tbz2', 'tb2'])) {
@@ -733,16 +759,17 @@ class ArchiveScanner
                 }
                 
                 $filename = $file->getFilename();
-                $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
                 
-                // Check if blocked
-                if (in_array($extension, $blockedExtensions)) {
+                // Check if this file should be blocked (extension or no extension)
+                if ($this->isFileBlocked($filename, $blockedExtensions)) {
                     $blockedFiles[] = [
                         'name' => basename($filename),
                         'path' => $filename,
                         'depth' => 0
                     ];
                 }
+                
+                $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
                 
                 // Check for nested archives (respect depth)
                 if (in_array($extension, ['tar', 'gz', 'bz2', 'zip', 'rar', 'tgz', 'tbz2', 'tb2']) && $maxDepth > 0) {
@@ -964,11 +991,8 @@ class ArchiveScanner
             $baseName = $originalName ?: basename($filepath);
             $originalFilename = pathinfo($baseName, PATHINFO_FILENAME);
             
-            // Check if decompressed file itself is an archive or blocked
-            $extension = strtolower(pathinfo($originalFilename, PATHINFO_EXTENSION));
-            
-            // Check if blocked extension
-            if (in_array($extension, $blockedExtensions)) {
+            // Check if decompressed file is blocked (extension or no extension)
+            if ($this->isFileBlocked($originalFilename, $blockedExtensions)) {
                 $result['blocked'] = true;
                 $result['files'][] = [
                     'name' => basename($originalFilename),
@@ -976,6 +1000,8 @@ class ArchiveScanner
                     'depth' => $currentDepth
                 ];
             }
+            
+            $extension = strtolower(pathinfo($originalFilename, PATHINFO_EXTENSION));
             
             // Check if it's a nested archive
             if (in_array($extension, ['zip', 'rar', 'tar', 'gz', 'bz2', 'tgz', 'tbz2', 'tb2'])) {

@@ -27,13 +27,20 @@
         </div>
     @endif
 
-    {{-- SECTION 1: Security Configuration --}}
+    {{-- ============================================ --}}
+    {{-- SECTION 1: Security Configuration           --}}
+    {{-- ============================================ --}}
     <h3 class="subheader">
-        <i class="glyphicon glyphicon-lock"></i> {{ __('Security Configuration') }}
+        <i class="glyphicon glyphicon-lock"></i> Security Configuration
     </h3>
     <p class="form-help block-help">
         {{ __('Define security rules for file attachments and archive scanning.') }}
     </p>
+
+    {{-- File Extension Blocking Subsection --}}
+    <h4 style="margin-left: 15px; margin-bottom: 15px; color: #666;">
+        <i class="glyphicon glyphicon-file"></i> {{ __('File Extension Blocking') }}
+    </h4>
 
     {{-- Blocked File Extensions Field --}}
     <div class="form-group">
@@ -57,6 +64,34 @@
             <span id="blocked_extensions_error" style="color: #d9534f; display: none; font-weight: bold;">
                 ⚠️ Invalid format. Use only letters, numbers and commas (no spaces). Example: exe,php,js
             </span>
+        </div>
+    </div>
+
+    {{-- Block Files Without Extension --}}
+    <div class="form-group">
+        <label for="block_no_extension" class="col-sm-2 control-label">
+            {{ __('Block Files Without Extension') }}
+        </label>
+        <div class="col-sm-6">
+            <div class="controls">
+                <div class="onoffswitch-wrap">
+                    <div class="onoffswitch">
+                        <input
+                            type="checkbox"
+                            name="settings[attachmentsecurity.block_no_extension]"
+                            value="1"
+                            id="block_no_extension"
+                            class="onoffswitch-checkbox"
+                            {{ ($settings['attachmentsecurity.block_no_extension'] ?? false) ? 'checked' : '' }}
+                        >
+                        <label class="onoffswitch-label" for="block_no_extension"></label>
+                    </div>
+                </div>
+            </div>
+            <p class="form-help">
+                {{ __('Block files that have no extension (e.g., readme, makefile, dockerfile).') }}<br/>
+                {{ __('Applies to both direct attachments and files inside compressed archives.') }}
+            </p>
         </div>
     </div>
 
@@ -194,7 +229,6 @@
                                     @php
                                         $rarType = $settings['_archive_capabilities']['rar']['type'] ?? 'unknown';
                                         $rarVersion = $settings['_archive_capabilities']['rar']['version'] ?? null;
-                                        $rar5Support = $settings['_archive_capabilities']['rar']['rar5_support'] ?? false;
                                     @endphp
                                     @if($rarType === 'extension')
                                         <strong>{{ __('RAR (PHP Extension)') }}</strong>
@@ -212,9 +246,7 @@
                                         <small class="text-muted">v{{ $rarVersion }}</small>
                                     @endif
                                 @else
-                                    <a href="#" data-toggle="collapse" data-target="#rar-install-instructions">
-                                        <i class="glyphicon glyphicon-question-sign"></i> {{ __('How to enable') }}
-                                    </a>
+                                    <code>sudo apt install unrar-nonfree</code>
                                 @endif
                             </td>
                         </tr>
@@ -266,30 +298,16 @@
                         {{ __('Last checked and updated:') }} {{ $settings['_archive_capabilities_scanned_at'] ?? __('Never') }}
                     </small>
                 </p>
-                
-                {{-- RAR Installation Instructions (collapsed by default) --}}
-                <div id="rar-install-instructions" class="collapse" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
-                    <h5><i class="glyphicon glyphicon-wrench"></i> {{ __('How to Enable RAR Support') }}</h5>
-                    
-                    <p><strong>{{ __('Option 1 (Recommended):') }}</strong> {{ __('PHP RAR extension') }}</p>
-                    <pre style="background: #f5f5f5; padding: 10px;">pecl install rar
-echo "extension=rar.so" >> /etc/php/8.x/mods-available/rar.ini
-phpenmod rar
-systemctl restart php8.x-fpm</pre>
-                    
-                    <p><strong>{{ __('Option 2:') }}</strong> {{ __('unrar-nonfree (Full RAR 5.x support)') }}</p>
-                    <pre style="background: #f5f5f5; padding: 10px;">apt-get install unrar</pre>
-                    
-                    <p><strong>{{ __('Option 3:') }}</strong> {{ __('unrar-free (Limited to RAR 2.x)') }}</p>
-                    <pre style="background: #f5f5f5; padding: 10px;">apt-get install unrar-free</pre>
-                    
-                    <p class="text-muted"><small>{{ __('After installation, save settings to detect the changes.') }}</small></p>
-                </div>
             </div>
         </div>
     </div>
 
     <hr class="margin-top margin-bottom" style="margin-left: 15px; margin-right: 15px; border-top: 1px solid #e5e5e5;">
+
+    {{-- Blocking Mode Section --}}
+    <h4 style="margin-left: 15px; margin-bottom: 15px; color: #666;">
+        <i class="glyphicon glyphicon-ban-circle"></i> {{ __('Blocking Mode') }}
+    </h4>
 
     {{-- Blocking Mode Field --}}
     <div class="form-group">
@@ -301,38 +319,144 @@ systemctl restart php8.x-fpm</pre>
                 class="form-control input-sized-lg"
                 id="blocking_mode"
                 name="settings[attachmentsecurity.blocking_mode]"
+                style="max-width: 500px !important; min-width: 450px;"
             >
                 <option value="all" {{ ($settings['attachmentsecurity.blocking_mode'] ?? 'all') === 'all' ? 'selected' : '' }}>
-                    {{ __('Block for all users') }}
+                    {{ __('Block for all users (administrators included - maximum security)') }}
                 </option>
                 <option value="regular" {{ ($settings['attachmentsecurity.blocking_mode'] ?? 'all') === 'regular' ? 'selected' : '' }}>
-                    {{ __('Block for regular users only (exclude administrators)') }}
+                    {{ __('Block for regular users only (administrators exempted)') }}
                 </option>
                 <option value="disabled" {{ ($settings['attachmentsecurity.blocking_mode'] ?? 'all') === 'disabled' ? 'selected' : '' }}>
-                    {{ __('Blocking disabled') }}
+                    {{ __('Blocking disabled (allow all file types for everyone)') }}
                 </option>
             </select>
             <p class="form-help">
-                <strong>{{ __('Applies to both regular files and files inside archives.') }}</strong><br/>
-                {{ __('Choose who should be restricted from downloading blocked file types.') }}<br/>
-                <strong>{{ __('Block for all users:') }}</strong> {{ __('Prevents everyone from downloading blocked files.') }}<br/>
-                <strong>{{ __('Block for regular users only:') }}</strong> {{ __('Administrators can download any file type.') }}<br/>
-                <strong>{{ __('Blocking disabled:') }}</strong> {{ __('All file types are allowed for everyone.') }}
+                {{ __('Choose who should be affected by file blocking rules.') }}<br/>
+                <strong>{{ __('Block for all users:') }}</strong> {{ __('Maximum security - blocks everyone including admins') }}<br/>
+                <strong>{{ __('Block for regular users only:') }}</strong> {{ __('Admins can download blocked files, regular users cannot') }}<br/>
+                <strong>{{ __('Blocking disabled:') }}</strong> {{ __('Temporarily disable all blocking (useful for testing)') }}
             </p>
         </div>
     </div>
 
-    <hr class="margin-top margin-bottom">
-
-    {{-- SECTION 2: Notifications & Messages --}}
-    <h3 class="subheader">
-        <i class="glyphicon glyphicon-comment"></i> {{ __('Notifications & Messages') }}
+    {{-- ============================================ --}}
+    {{-- SECTION 2: Notifications                    --}}
+    {{-- ============================================ --}}
+    <h3 class="subheader margin-top-50">
+        <i class="glyphicon glyphicon-envelope"></i> Notifications
     </h3>
     <p class="form-help block-help">
-        {{ __('Customize the blocked page appearance and message.') }}
+        {{ __('Send email alerts when files are blocked. Uses FreeScout\'s existing SMTP configuration.') }}
     </p>
 
-    {{-- Page Title Field (FIRST) --}}
+    {{-- Enable Email Notifications --}}
+    <div class="form-group">
+        <label for="email_notifications_enabled" class="col-sm-2 control-label">
+            {{ __('Enable Email Notifications') }}
+        </label>
+        <div class="col-sm-6">
+            @php
+                $mailDriver = $settings['_mail_driver'] ?? 'smtp';
+                $isSmtp = ($mailDriver === 'smtp');
+            @endphp
+            
+            <div class="controls">
+                <div class="onoffswitch-wrap">
+                    <div class="onoffswitch">
+                        <input
+                            type="checkbox"
+                            name="settings[attachmentsecurity.email_notifications_enabled]"
+                            value="1"
+                            id="email_notifications_enabled"
+                            class="onoffswitch-checkbox"
+                            {{ ($settings['attachmentsecurity.email_notifications_enabled'] ?? false) ? 'checked' : '' }}
+                            {{ !$isSmtp ? 'disabled' : '' }}
+                            data-mail-driver="{{ $mailDriver }}"
+                        >
+                        <label class="onoffswitch-label" for="email_notifications_enabled"></label>
+                    </div>
+                </div>
+            </div>
+            <p class="form-help">
+                {{ __('Send email notification when a file is blocked.') }}
+                @if(!$isSmtp)
+                    <br>
+                    <span class="text-danger">
+                        <i class="glyphicon glyphicon-warning-sign"></i>
+                        <strong>{{ __('SMTP driver required') }}</strong> - {{ __('Email notifications are only available with SMTP mail driver. Current driver:') }} <code>{{ $mailDriver ?: 'not configured' }}</code>
+                    </span>
+                @else
+                    <span class="text-muted">({{ __('only available with SMTP driver') }})</span>
+                @endif
+            </p>
+        </div>
+    </div>
+
+    {{-- Notification Email Address --}}
+    <div class="form-group">
+        <label for="notification_email" class="col-sm-2 control-label">
+            {{ __('Notification Email Address') }}
+        </label>
+        <div class="col-sm-6">
+            <input
+                type="email"
+                class="form-control input-sized-lg"
+                id="notification_email"
+                name="settings[attachmentsecurity.notification_email]"
+                value="{{ $settings['attachmentsecurity.notification_email'] ?? '' }}"
+                placeholder="security@example.com"
+            >
+            <p class="form-help">
+                {{ __('Email address to receive incident notifications.') }}<br/>
+                <span class="text-warning" id="notification_email_warning" style="display: none;">
+                    <i class="glyphicon glyphicon-warning-sign"></i>
+                    {{ __('Email notifications are enabled but no valid email address is provided. Notifications will not be sent.') }}
+                </span>
+            </p>
+            <span id="notification_email_error" style="color: #d9534f; display: none; font-weight: bold;">
+                ⚠️ Invalid email format. Example: security@example.com
+            </span>
+        </div>
+    </div>
+
+    {{-- Notification Email Subject --}}
+    <div class="form-group">
+        <label for="notification_subject" class="col-sm-2 control-label">
+            {{ __('Email Subject') }}
+        </label>
+        <div class="col-sm-6">
+            <input
+                type="text"
+                class="form-control"
+                style="width: 100%; max-width: 800px;"
+                id="notification_subject"
+                name="settings[attachmentsecurity.notification_subject]"
+                value="{{ $settings['attachmentsecurity.notification_subject'] ?? 'FreeScout AttachmentSecurity alert - {user}' }}"
+                placeholder="FreeScout AttachmentSecurity alert - {user}"
+            >
+            <p class="form-help">
+                {{ __('Email subject for notifications.') }}<br/>
+                {{ __('Available variables:') }} 
+                <code>{user}</code> - {{ __('User who attempted download') }}, 
+                <code>{ticket}</code> - {{ __('Ticket number') }}, 
+                <code>{filename}</code> - {{ __('Blocked filename') }}, 
+                <code>{reason}</code> - {{ __('Blocking reason') }}
+            </p>
+        </div>
+    </div>
+
+    {{-- ============================================ --}}
+    {{-- SECTION 3: Messages & Appearance            --}}
+    {{-- ============================================ --}}
+    <h3 class="subheader margin-top-50">
+        <i class="glyphicon glyphicon-comment"></i> Messages & Appearance
+    </h3>
+    <p class="form-help block-help">
+        {{ __('Customize the blocked page appearance and messages shown to users.') }}
+    </p>
+
+    {{-- Page Title Field --}}
     <div class="form-group">
         <label for="page_title" class="col-sm-2 control-label">
             {{ __('Page Title') }}
@@ -352,7 +476,7 @@ systemctl restart php8.x-fpm</pre>
         </div>
     </div>
 
-    {{-- Block Message Field (SECOND) --}}
+    {{-- Block Message Field --}}
     <div class="form-group">
         <label for="block_message" class="col-sm-2 control-label">
             {{ __('Block Message') }}
@@ -434,10 +558,10 @@ systemctl restart php8.x-fpm</pre>
         </div>
     </div>
 
-    {{-- Background Color Field (THIRD) --}}
+    {{-- Background Color Field --}}
     <div class="form-group">
         <label for="background_color" class="col-sm-2 control-label">
-            {{ __('Background Color') }}
+            {{ __('Background Gradient Colors') }}
         </label>
         <div class="col-sm-6">
             <div class="input-group">
@@ -473,10 +597,14 @@ systemctl restart php8.x-fpm</pre>
                     data-confirm="{{ __('Are you sure you want to reset all settings to default values?') }}"
                     data-defaults="{{ htmlspecialchars(json_encode([
                         'blocked_extensions' => 'exe,php,bat,cmd,htm,html,js,vbs,ps1,sh,phar',
+                        'block_no_extension' => false,
                         'blocking_mode' => 'all',
                         'archive_scan_enabled' => false,
                         'max_nesting_depth' => 1,
                         'unreadable_archives_mode' => 'block',
+                        'email_notifications_enabled' => false,
+                        'notification_email' => '',
+                        'notification_subject' => 'FreeScout AttachmentSecurity alert - {user}',
                         'page_title' => '🚫 Download Blocked',
                         'block_message' => 'For security reasons the file {filename} cannot be downloaded. If you need access to this content, please contact support.',
                         'archive_block_message' => 'The file {filename} contains blocked files: {blocked_files}',
