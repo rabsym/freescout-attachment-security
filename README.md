@@ -593,13 +593,11 @@ Contributions are welcome! If you have ideas for improvements or find any issues
 
 ## Support the Project
 
-If you find this module useful and want to support its development:
-
-**PayPal Donations**: [rabsym@gmail.com](https://www.paypal.com/paypalme/rabsym)
+If you find this module useful and would like to support its development, please feel free to sponsor this project via Github sponsors.
 
 Your support helps maintain and improve this project. Thank you! 🙏
 
-## Support
+## Getting Support
 
 For issues, questions, or feature requests:
 
