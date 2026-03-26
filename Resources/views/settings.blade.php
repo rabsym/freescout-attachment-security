@@ -31,7 +31,7 @@
     {{-- SECTION 1: Security Configuration           --}}
     {{-- ============================================ --}}
     <h3 class="subheader">
-        <i class="glyphicon glyphicon-lock"></i> Security Configuration
+        <i class="glyphicon glyphicon-lock"></i> {{ __('Security Configuration') }}
     </h3>
     <p class="form-help block-help">
         {{ __('Define security rules for file attachments and archive scanning.') }}
@@ -139,7 +139,7 @@
                 class="form-control input-sized-lg"
                 id="max_nesting_depth"
                 name="settings[attachmentsecurity.max_nesting_depth]"
-                style="min-width: 500px;"
+                style="min-width: 600px;"
             >
                 <option value="0" {{ ($settings['attachmentsecurity.max_nesting_depth'] ?? 1) == 0 ? 'selected' : '' }}>
                     {{ __('0 levels (scan archive only, do not scan nested archives)') }}
@@ -319,7 +319,7 @@
                 class="form-control input-sized-lg"
                 id="blocking_mode"
                 name="settings[attachmentsecurity.blocking_mode]"
-                style="max-width: 500px !important; min-width: 450px;"
+                style="max-width: 650px !important; min-width: 600px;"
             >
                 <option value="all" {{ ($settings['attachmentsecurity.blocking_mode'] ?? 'all') === 'all' ? 'selected' : '' }}>
                     {{ __('Block for all users (administrators included - maximum security)') }}
@@ -344,7 +344,7 @@
     {{-- SECTION 2: Notifications                    --}}
     {{-- ============================================ --}}
     <h3 class="subheader margin-top-50">
-        <i class="glyphicon glyphicon-envelope"></i> Notifications
+        <i class="glyphicon glyphicon-envelope"></i> {{ __('Notifications') }}
     </h3>
     <p class="form-help block-help">
         {{ __('Send email alerts when files are blocked. Uses FreeScout\'s existing SMTP configuration.') }}
@@ -432,8 +432,8 @@
                 style="width: 100%; max-width: 800px;"
                 id="notification_subject"
                 name="settings[attachmentsecurity.notification_subject]"
-                value="{{ $settings['attachmentsecurity.notification_subject'] ?? 'FreeScout AttachmentSecurity alert - {user}' }}"
-                placeholder="FreeScout AttachmentSecurity alert - {user}"
+                value="{{ $settings['attachmentsecurity.notification_subject'] ?: __('default.notification_subject') }}"
+                placeholder="{{ __('default.notification_subject') }}"
             >
             <p class="form-help">
                 {{ __('Email subject for notifications.') }}<br/>
@@ -450,7 +450,7 @@
     {{-- SECTION 3: Messages & Appearance            --}}
     {{-- ============================================ --}}
     <h3 class="subheader margin-top-50">
-        <i class="glyphicon glyphicon-comment"></i> Messages & Appearance
+        <i class="glyphicon glyphicon-comment"></i> {{ __('Messages & Appearance') }}
     </h3>
     <p class="form-help block-help">
         {{ __('Customize the blocked page appearance and messages shown to users.') }}
@@ -467,8 +467,8 @@
                 class="form-control input-sized-lg"
                 id="page_title"
                 name="settings[attachmentsecurity.page_title]"
-                value="{{ $settings['attachmentsecurity.page_title'] ?? '🚫 Download Blocked' }}"
-                placeholder="🚫 Download Blocked"
+                value="{{ $settings['attachmentsecurity.page_title'] ?: __('default.page_title') }}"
+                placeholder="{{ __('default.page_title') }}"
             >
             <p class="form-help">
                 {{ __('Title shown at the top of the blocked page.') }}
@@ -487,8 +487,8 @@
                 id="block_message"
                 name="settings[attachmentsecurity.block_message]"
                 rows="4"
-                placeholder="For security reasons the file {filename} cannot be downloaded."
-            >{{ $settings['attachmentsecurity.block_message'] ?? '' }}</textarea>
+                placeholder="{{ __('default.block_message') }}"
+            >{{ $settings['attachmentsecurity.block_message'] ?: __('default.block_message') }}</textarea>
             <p class="form-help">
                 {{ __('Message displayed when a file is blocked.') }}<br/>
                 {{ __('Available variables:') }} <code>{filename}</code> - {{ __('Name of the blocked file') }}, 
@@ -509,8 +509,8 @@
                 id="archive_block_message"
                 name="settings[attachmentsecurity.archive_block_message]"
                 rows="3"
-                placeholder="The file {filename} contains blocked files: {blocked_files}"
-            >{{ $settings['attachmentsecurity.archive_block_message'] ?? '' }}</textarea>
+                placeholder="{{ __('default.archive_block_message') }}"
+            >{{ $settings['attachmentsecurity.archive_block_message'] ?: __('default.archive_block_message') }}</textarea>
             <p class="form-help">
                 {{ __('Message shown when a compressed file contains blocked files inside.') }}<br/>
                 {{ __('Available variables:') }} <code>{filename}</code>, <code>{blocked_files}</code>
@@ -529,8 +529,8 @@
                 id="encrypted_archive_block_message"
                 name="settings[attachmentsecurity.encrypted_archive_block_message]"
                 rows="3"
-                placeholder="The file {filename} is password-protected and cannot be scanned for security reasons."
-            >{{ $settings['attachmentsecurity.encrypted_archive_block_message'] ?? '' }}</textarea>
+                placeholder="{{ __('default.encrypted_archive_block_message') }}"
+            >{{ $settings['attachmentsecurity.encrypted_archive_block_message'] ?: __('default.encrypted_archive_block_message') }}</textarea>
             <p class="form-help">
                 {{ __('Message shown when a compressed file is password-protected and cannot be scanned.') }}<br/>
                 {{ __('Available variables:') }} <code>{filename}</code>
@@ -549,8 +549,8 @@
                 id="unreadable_archive_block_message"
                 name="settings[attachmentsecurity.unreadable_archive_block_message]"
                 rows="3"
-                placeholder="The file {filename} cannot be scanned because it appears to be corrupted or has an invalid format. For security reasons, the download has been blocked."
-            >{{ $settings['attachmentsecurity.unreadable_archive_block_message'] ?? '' }}</textarea>
+                placeholder="{{ __('default.unreadable_archive_block_message') }}"
+            >{{ $settings['attachmentsecurity.unreadable_archive_block_message'] ?: __('default.unreadable_archive_block_message') }}</textarea>
             <p class="form-help">
                 {{ __('Message shown when an archive cannot be scanned (corrupted, invalid format) and Block download mode is enabled.') }}<br/>
                 {{ __('Available variables:') }} <code>{filename}</code>
@@ -604,12 +604,12 @@
                         'unreadable_archives_mode' => 'block',
                         'email_notifications_enabled' => false,
                         'notification_email' => '',
-                        'notification_subject' => 'FreeScout AttachmentSecurity alert - {user}',
-                        'page_title' => '🚫 Download Blocked',
-                        'block_message' => 'For security reasons the file {filename} cannot be downloaded. If you need access to this content, please contact support.',
-                        'archive_block_message' => 'The file {filename} contains blocked files: {blocked_files}',
-                        'encrypted_archive_block_message' => 'The file {filename} is password-protected and cannot be scanned for security reasons.',
-                        'unreadable_archive_block_message' => 'The file {filename} cannot be scanned because it appears to be corrupted or has an invalid format. For security reasons, the download has been blocked.',
+                        'notification_subject' => __('default.notification_subject'),
+                        'page_title' => __('default.page_title'),
+                        'block_message' => __('default.block_message'),
+                        'archive_block_message' => __('default.archive_block_message'),
+                        'encrypted_archive_block_message' => __('default.encrypted_archive_block_message'),
+                        'unreadable_archive_block_message' => __('default.unreadable_archive_block_message'),
                         'background_color' => '#4A90E2, #5C6AC4'
                     ]), ENT_QUOTES) }}"
                     style="margin-left: 10px;">

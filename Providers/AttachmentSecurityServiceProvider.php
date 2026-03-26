@@ -53,6 +53,7 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
     {
         $this->registerViews();
         $this->registerConfiguration();
+        $this->registerTranslations();
         $this->registerMiddleware();
         $this->registerSettingsHooks();
     }
@@ -96,6 +97,19 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
             __DIR__ . '/../Config/config.php',
             self::MODULE_ALIAS
         );
+    }
+
+    /**
+     * Register translations.
+     *
+     * Loads JSON translation files from the module's lang directory,
+     * enabling i18n support via Laravel's __() helper.
+     *
+     * @return void
+     */
+    protected function registerTranslations()
+    {
+        $this->loadJsonTranslationsFrom(__DIR__ . '/../Resources/lang');
     }
 
     /**
@@ -200,19 +214,11 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
                 self::MODE_ALL
             );
 
-            // Get custom block message or use default
-            $blockMessage = Module::getOption(
-                self::MODULE_ALIAS,
-                'block_message',
-                config('attachmentsecurity.block_message')
-            );
+            // Get custom block message or use translated default
+            $blockMessage = $this->resolveOption('block_message', 'default.block_message');
 
-            // Get page title or use default
-            $pageTitle = Module::getOption(
-                self::MODULE_ALIAS,
-                'page_title',
-                '🚫 Download Blocked'
-            );
+            // Get page title or use translated default
+            $pageTitle = $this->resolveOption('page_title', 'default.page_title');
 
             // Get background color or use default (blue gradient)
             $backgroundColor = Module::getOption(
@@ -240,17 +246,9 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
                 config('attachmentsecurity.max_nesting_depth')
             );
 
-            $archiveBlockMessage = Module::getOption(
-                self::MODULE_ALIAS,
-                'archive_block_message',
-                config('attachmentsecurity.archive_block_message')
-            );
+            $archiveBlockMessage = $this->resolveOption('archive_block_message', 'default.archive_block_message');
 
-            $encryptedArchiveBlockMessage = Module::getOption(
-                self::MODULE_ALIAS,
-                'encrypted_archive_block_message',
-                config('attachmentsecurity.encrypted_archive_block_message')
-            );
+            $encryptedArchiveBlockMessage = $this->resolveOption('encrypted_archive_block_message', 'default.encrypted_archive_block_message');
 
             $unreadableArchivesMode = Module::getOption(
                 self::MODULE_ALIAS,
@@ -258,11 +256,7 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
                 config('attachmentsecurity.unreadable_archives_mode')
             );
 
-            $unreadableArchiveBlockMessage = Module::getOption(
-                self::MODULE_ALIAS,
-                'unreadable_archive_block_message',
-                config('attachmentsecurity.unreadable_archive_block_message')
-            );
+            $unreadableArchiveBlockMessage = $this->resolveOption('unreadable_archive_block_message', 'default.unreadable_archive_block_message');
 
             // v3.4.0: Block files without extension
             $blockNoExtension = Module::getOption(
@@ -284,11 +278,7 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
                 config('attachmentsecurity.notification_email')
             );
 
-            $notificationSubject = Module::getOption(
-                self::MODULE_ALIAS,
-                'notification_subject',
-                config('attachmentsecurity.notification_subject')
-            );
+            $notificationSubject = $this->resolveOption('notification_subject', 'default.notification_subject');
 
             $settings[self::SETTINGS_SECTION . '.blocked_extensions'] = $blockedExtensions;
             $settings[self::SETTINGS_SECTION . '.block_no_extension'] = $blockNoExtension;
@@ -680,6 +670,29 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
         }
 
         return implode(',', $available);
+    }
+
+    /**
+     * Resolve a module option applying i18n when no value is stored in DB.
+     *
+     * If the database has a stored value, it is returned as-is (respects
+     * admin customizations regardless of language).
+     * If no value is stored, the config fallback is a translation key and
+     * __() is used to return the translated default for the current locale.
+     *
+     * @param string $key    Option key
+     * @param string $configKey Config fallback key (translation key)
+     * @return string|mixed
+     */
+    protected function resolveOption(string $key, string $configKey)
+    {
+        $stored = Module::getOption(self::MODULE_ALIAS, $key);
+
+        if (!empty($stored)) {
+            return $stored;
+        }
+
+        return __($configKey);
     }
 
     /**

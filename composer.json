@@ -1,0 +1,15 @@
+{
+    "name": "rabsym/attachmentsecurity",
+    "description": "Enhanced security module that blocks dangerous file attachments in FreeScout",
+    "license": "AGPL-3.0-only",
+    "authors": [
+        {
+            "name": "Raimundo Alba"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Modules\\AttachmentSecurity\\": ""
+        }
+    }
+}

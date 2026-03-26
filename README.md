@@ -1,9 +1,9 @@
 # Attachment Security Module for FreeScout
 
-**Version:** 3.4.0 (Released: March 12, 2026)  
+**Version:** 3.5.0 (Released: March 26, 2026)  
 **Author:** Raimundo Alba  
 **GitHub:** https://github.com/rabsym/freescout-attachment-security  
-**License:** MIT
+**License:** AGPL-3.0
 
 ## Overview
 
@@ -12,6 +12,7 @@ The Attachment Security module enhances FreeScout's security by blocking downloa
 ## Features
 
 ### Core Functionality
+- ✅ **Internationalization (i18n)** (v3.5.0): Spanish, French, German, Portuguese, Italian and Dutch translations included.
 - ✅ **Extension-based blocking**: Block downloads by file extension (exe, php, js, etc.)
 - ✅ **Block files without extension** (v3.4.0): Optional blocking of extensionless files (readme, makefile, etc.)
 - ✅ **Email notifications** (v3.4.0): Automated alerts for blocked file incidents (requires SMTP driver) with customizable subject and variables
@@ -131,7 +132,7 @@ The module will automatically detect and use the best available method. Check th
 1. **Upload the module:**
    ```bash
    cd /var/www/html/Modules
-   tar -xzf AttachmentSecurity_v3.2.0.tar.gz
+   tar -xzf AttachmentSecurity_v3.5.0.tar.gz
    ```
 
 2. **Set permissions:**
@@ -529,6 +530,13 @@ For maximum security:
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
+### Version 3.5.0 (2026-03-26)
+- Internationalization (i18n) support via JSON translation files
+- Added Spanish (es.json) and French (fr.json) translations
+- Wrapped untranslated UI strings in __() helper
+- Default configurable messages (Block Message, Archive Block Message, Encrypted Archive Block Message, Unreadable Archive Block Message, Page Title, Email Subject) now resolved through translation system when no value is stored in database
+- **Existing installations:** use Reset to Defaults in Settings and save to get translated default messages. Note that Reset to Defaults restores **all** configuration values to their defaults — review all settings carefully before saving
+
 ### Version 3.4.0 (2026-03-12)
 - Block files without extension (readme, makefile, etc.)
 - Email notification system for blocked file incidents (requires SMTP)
@@ -577,11 +585,7 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
 ## License
 
-This module is open-source software licensed under the MIT license.
-
-## Usage and Modifications
-
-**Feel free to use and modify this module for your needs!** This is open source software and you're encouraged to adapt it to your requirements.
+GNU Affero General Public License v3.0 — see the LICENSE file for details.
 
 ## Contributing
 

@@ -53,7 +53,7 @@ return [
     | Title shown on the blocked page.
     |
     */
-    'page_title' => '🚫 Download Blocked',
+    'page_title' => 'default.page_title',
 
     /*
     |--------------------------------------------------------------------------
@@ -74,13 +74,13 @@ return [
     | Available variables: {filename}, {extension}, {blocked_files}
     |
     */
-    'block_message' => 'For security reasons the file {filename} cannot be downloaded. If you need access to this content, please contact support.',
+    'block_message' => 'default.block_message',
 
-    'archive_block_message' => 'The file {filename} contains blocked files: {blocked_files}',
+    'archive_block_message' => 'default.archive_block_message',
 
-    'encrypted_archive_block_message' => 'The file {filename} is password-protected and cannot be scanned for security reasons.',
+    'encrypted_archive_block_message' => 'default.encrypted_archive_block_message',
 
-    'unreadable_archive_block_message' => 'The file {filename} cannot be scanned because it appears to be corrupted or has an invalid format. For security reasons, the download has been blocked.',
+    'unreadable_archive_block_message' => 'default.unreadable_archive_block_message',
 
     /*
     |--------------------------------------------------------------------------
@@ -111,6 +111,6 @@ return [
 
     'notification_email' => '',
 
-    'notification_subject' => 'FreeScout AttachmentSecurity alert - {user}',
+    'notification_subject' => 'default.notification_subject',
 
 ];

@@ -2,12 +2,12 @@
     "name": "Attachment Security",
     "alias": "attachmentsecurity",
     "description": "Enhanced security module that blocks dangerous file attachments with role-based control, customizable notifications, and comprehensive logging. Protects FreeScout from malicious files with admin exemptions and detailed audit trails.",
-    "version": "3.4.0",
+    "version": "3.5.0",
     "detailsUrl": "https://github.com/rabsym/freescout-attachment-security",
     "author": "Raimundo Alba",
     "authorUrl": "https://github.com/rabsym",
     "requiredAppVersion": "1.8.0",
-    "license": "MIT",
+    "license": "AGPL-3.0",
     "keywords": [
         "security",
         "attachments",
@@ -27,7 +27,9 @@
     "aliases": {
         "AttachmentSecurity": "Modules\\AttachmentSecurity\\Providers\\AttachmentSecurityServiceProvider"
     },
-    "files": [],
+    "files": [
+        "start.php"
+    ],
     "requires": [],
     "latestVersionUrl": "https://raw.githubusercontent.com/rabsym/freescout-attachment-security/main/version.txt",
     "latestVersionZipUrl": "https://github.com/rabsym/freescout-attachment-security/releases/latest/download/AttachmentSecurity.zip"

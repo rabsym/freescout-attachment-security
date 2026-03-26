@@ -1,5 +1,18 @@
 # Changelog - Attachment Security Module
 
+## [3.5.0] - 2026-03-26
+
+### 🌍 Internationalization (i18n)
+
+- Added JSON-based translation support via `loadJsonTranslationsFrom()`
+- Added translations for Spanish (es), French (fr), German (de), Portuguese (pt), Italian (it) and Dutch (nl)
+- English (en) included as fallback for unsupported locales
+- Wrapped previously untranslated UI strings in `__()` helper: section headers (Security Configuration, Notifications, Messages & Appearance) and the Close button on the blocked page
+- Default configurable messages (Block Message, Archive Block Message, Encrypted Archive Block Message, Unreadable Archive Block Message, Page Title, Email Subject) are now resolved through the translation system when no value is stored in the database
+- **Existing installations:** to get the translated default messages, use the **Reset to Defaults** button in Settings and save. Note that Reset to Defaults restores **all** configuration values to their defaults — review all settings carefully before saving
+
+---
+
 ## [3.4.0] - 2026-03-12
 
 ### 🆕 New Features

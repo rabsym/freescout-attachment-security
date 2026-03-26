@@ -1,0 +1,10 @@
+{
+    "(encrypted)": " (encrypted)",
+    "(nesting limit exceeded)": " (nesting limit exceeded)",
+    "default.page_title": "🚫 Download Blocked",
+    "default.block_message": "For security reasons the file {filename} cannot be downloaded. If you need access to this content, please contact support.",
+    "default.archive_block_message": "The file {filename} contains blocked files: {blocked_files}",
+    "default.encrypted_archive_block_message": "The file {filename} is password-protected and cannot be scanned for security reasons.",
+    "default.unreadable_archive_block_message": "The file {filename} cannot be scanned because it appears to be corrupted or has an invalid format. For security reasons, the download has been blocked.",
+    "default.notification_subject": "FreeScout AttachmentSecurity alert - {user}"
+}

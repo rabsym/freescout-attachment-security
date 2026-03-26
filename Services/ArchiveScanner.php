@@ -269,7 +269,7 @@ class ArchiveScanner
                                 if ($nestedResult['encrypted']) {
                                     // Nested archive is encrypted - treat it as a blocked file
                                     $blockedFiles[] = [
-                                        'name' => basename($filename) . ' (encrypted)',
+                                        'name' => basename($filename) . __('(encrypted)'),
                                         'path' => $filename,
                                         'depth' => $currentDepth,
                                         'encrypted' => true
@@ -284,7 +284,7 @@ class ArchiveScanner
                     } else {
                         // We've reached max depth - block this nested archive
                         $blockedFiles[] = [
-                            'name' => basename($filename) . ' (nesting limit exceeded)',
+                            'name' => basename($filename) . __('(nesting limit exceeded)'),
                             'path' => $filename,
                             'depth' => $currentDepth,
                             'nesting_limit' => true
@@ -495,7 +495,7 @@ class ArchiveScanner
                             if ($nestedResult['blocked']) {
                                 if ($nestedResult['encrypted']) {
                                     $blockedFiles[] = [
-                                        'name' => basename($line) . ' (encrypted)',
+                                        'name' => basename($line) . __('(encrypted)'),
                                         'path' => $line,
                                         'depth' => $currentDepth,
                                         'encrypted' => true
@@ -512,7 +512,7 @@ class ArchiveScanner
                     } else {
                         // Max depth reached - block this nested archive
                         $blockedFiles[] = [
-                            'name' => basename($line) . ' (nesting limit exceeded)',
+                            'name' => basename($line) . __('(nesting limit exceeded)'),
                             'path' => $line,
                             'depth' => $currentDepth,
                             'nesting_limit' => true
@@ -659,7 +659,7 @@ class ArchiveScanner
                             if ($nestedResult['blocked']) {
                                 if ($nestedResult['encrypted']) {
                                     $blockedFiles[] = [
-                                        'name' => basename($filename) . ' (encrypted)',
+                                        'name' => basename($filename) . __('(encrypted)'),
                                         'path' => $filename,
                                         'depth' => $currentDepth,
                                         'encrypted' => true
@@ -676,7 +676,7 @@ class ArchiveScanner
                     } else {
                         // Max depth reached - block this nested archive
                         $blockedFiles[] = [
-                            'name' => basename($filename) . ' (nesting limit exceeded)',
+                            'name' => basename($filename) . __('(nesting limit exceeded)'),
                             'path' => $filename,
                             'depth' => $currentDepth,
                             'nesting_limit' => true
@@ -791,7 +791,7 @@ class ArchiveScanner
                             if ($nestedResult['blocked']) {
                                 if ($nestedResult['encrypted']) {
                                     $blockedFiles[] = [
-                                        'name' => basename($filename) . ' (encrypted)',
+                                        'name' => basename($filename) . __('(encrypted)'),
                                         'path' => $filename,
                                         'depth' => 0,
                                         'encrypted' => true
@@ -1024,7 +1024,7 @@ class ArchiveScanner
                         if ($nestedResult['encrypted']) {
                             $result['blocked'] = true;
                             $result['files'][] = [
-                                'name' => basename($originalFilename) . ' (encrypted)',
+                                'name' => basename($originalFilename) . __('(encrypted)'),
                                 'path' => $originalFilename,
                                 'depth' => $currentDepth,
                                 'encrypted' => true
@@ -1038,7 +1038,7 @@ class ArchiveScanner
                     // Max depth reached
                     $result['blocked'] = true;
                     $result['files'][] = [
-                        'name' => basename($originalFilename) . ' (nesting limit exceeded)',
+                        'name' => basename($originalFilename) . __('(nesting limit exceeded)'),
                         'path' => $originalFilename,
                         'depth' => $currentDepth,
                         'nesting_limit' => true

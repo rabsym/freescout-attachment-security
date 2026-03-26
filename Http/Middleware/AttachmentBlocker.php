@@ -261,7 +261,7 @@ class AttachmentBlocker
         
         if ($blockType === 'no_extension') {
             // File without extension block
-            $customMessage = Module::getOption('attachmentsecurity', 'block_message', config('attachmentsecurity.block_message'));
+            $customMessage = $this->resolveMessage('block_message', 'default.block_message');
             
             $this->log('FILE WITHOUT EXTENSION BLOCKED', [
                 'user' => $user,
@@ -283,7 +283,7 @@ class AttachmentBlocker
             
         } elseif ($blockType === 'encrypted') {
             // Encrypted archive block
-            $customMessage = Module::getOption('attachmentsecurity', 'encrypted_archive_block_message', config('attachmentsecurity.encrypted_archive_block_message'));
+            $customMessage = $this->resolveMessage('encrypted_archive_block_message', 'default.encrypted_archive_block_message');
             
             $this->log('ENCRYPTED ARCHIVE BLOCKED', [
                 'user' => $user,
@@ -302,7 +302,7 @@ class AttachmentBlocker
 
         } elseif ($blockType === 'archive' && $scanResult) {
             // Archive with blocked content
-            $customMessage = Module::getOption('attachmentsecurity', 'archive_block_message', config('attachmentsecurity.archive_block_message'));
+            $customMessage = $this->resolveMessage('archive_block_message', 'default.archive_block_message');
             
             $blockedFileNames = array_map(function($file) {
                 return $file['name'];
@@ -332,7 +332,7 @@ class AttachmentBlocker
 
         } elseif ($blockType === 'unreadable' && $scanResult) {
             // Unreadable archive block
-            $customMessage = Module::getOption('attachmentsecurity', 'unreadable_archive_block_message', config('attachmentsecurity.unreadable_archive_block_message'));
+            $customMessage = $this->resolveMessage('unreadable_archive_block_message', 'default.unreadable_archive_block_message');
             
             $errorMsg = $scanResult['error'] ?? 'Unknown error';
             
@@ -354,7 +354,7 @@ class AttachmentBlocker
 
         } else {
             // Regular extension block (v3.0.0 logic)
-            $customMessage = Module::getOption('attachmentsecurity', 'block_message', config('attachmentsecurity.block_message'));
+            $customMessage = $this->resolveMessage('block_message', 'default.block_message');
             
             $this->log('BLOCKING DOWNLOAD', [
                 'user' => $user,
@@ -380,7 +380,7 @@ class AttachmentBlocker
         $this->sendEmailNotification($user, $ticketNumber, $filename, $emailReason);
 
         // Get page customization
-        $pageTitle = Module::getOption('attachmentsecurity', 'page_title', '🚫 Download Blocked');
+        $pageTitle = $this->resolveMessage('page_title', 'default.page_title');
         $backgroundColor = Module::getOption('attachmentsecurity', 'background_color', '#4A90E2, #5C6AC4');
 
         // Generate and send blocked page
@@ -401,6 +401,7 @@ class AttachmentBlocker
     {
         $messageHtml = $message;
         $pageTitleHtml = htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8');
+        $closeLabel = __('Close');
         
         // Parse background colors
         $colors = array_map('trim', explode(',', $backgroundColor));
@@ -479,7 +480,7 @@ class AttachmentBlocker
         <div class="message">
             <p><strong>{$messageHtml}</strong></p>
         </div>
-        <button onclick="handleClose()">✕ Close</button>
+        <button onclick="handleClose()">✕ {$closeLabel}</button>
     </div>
     <script>
         function handleClose() {
@@ -528,7 +529,7 @@ HTML;
             }
 
             // Get email subject template
-            $subjectTemplate = Module::getOption('attachmentsecurity', 'notification_subject', config('attachmentsecurity.notification_subject'));
+            $subjectTemplate = $this->resolveMessage('notification_subject', 'default.notification_subject');
             
             // Replace variables in subject
             $subject = str_replace(
@@ -630,6 +631,27 @@ Date/Time:      {$timestamp}
 ========================================
 This is an automated notification from FreeScout Attachment Security Module.
 EMAIL;
+    }
+
+    /**
+     * Resolve a stored message applying i18n when no value is in DB.
+     *
+     * If the database has a stored value it is returned as-is.
+     * If no value is stored, the translation key is resolved via __().
+     *
+     * @param string $key       Option key
+     * @param string $configKey Translation key used as default
+     * @return string
+     */
+    protected function resolveMessage(string $key, string $configKey): string
+    {
+        $stored = Module::getOption('attachmentsecurity', $key);
+
+        if (!empty($stored)) {
+            return $stored;
+        }
+
+        return __($configKey);
     }
 
     /**
