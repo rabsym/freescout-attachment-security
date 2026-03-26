@@ -52,9 +52,23 @@ class AttachmentSecurityServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->registerViews();
+        $this->registerTranslations();
         $this->registerConfiguration();
         $this->registerMiddleware();
         $this->registerSettingsHooks();
+    }
+
+    /**
+     * Register translations.
+     *
+     * Loads JSON translation files from the module's lang directory,
+     * enabling i18n support via Laravel's __() helper.
+     *
+     * @return void
+     */
+    protected function registerTranslations()
+    {
+        $this->loadJsonTranslationsFrom(__DIR__ . '/../Resources/lang');
     }
 
     /**
