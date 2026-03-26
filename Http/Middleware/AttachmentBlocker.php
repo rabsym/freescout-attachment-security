@@ -269,7 +269,7 @@ class AttachmentBlocker
                 'file' => $filename
             ]);
 
-            $emailReason = 'File has no extension';
+            $emailReason = __('email.reason_no_extension');
             
             $safeMessage = htmlspecialchars($customMessage, ENT_QUOTES, 'UTF-8');
             $message = str_replace(
@@ -291,7 +291,7 @@ class AttachmentBlocker
                 'file' => $filename
             ]);
 
-            $emailReason = 'Encrypted archive - cannot be scanned';
+            $emailReason = __('email.reason_encrypted');
 
             $safeMessage = htmlspecialchars($customMessage, ENT_QUOTES, 'UTF-8');
             $message = str_replace(
@@ -317,7 +317,7 @@ class AttachmentBlocker
             ]);
 
             $blockedFilesStr = implode(', ', $blockedFileNames);
-            $emailReason = 'Archive contains blocked files: ' . $blockedFilesStr;
+            $emailReason = __('email.reason_archive') . ' ' . $blockedFilesStr;
 
             $safeMessage = htmlspecialchars($customMessage, ENT_QUOTES, 'UTF-8');
             
@@ -343,7 +343,7 @@ class AttachmentBlocker
                 'error' => $errorMsg
             ]);
 
-            $emailReason = 'Unreadable/corrupted archive: ' . $errorMsg;
+            $emailReason = __('email.reason_unreadable');
 
             $safeMessage = htmlspecialchars($customMessage, ENT_QUOTES, 'UTF-8');
             $message = str_replace(
@@ -363,7 +363,7 @@ class AttachmentBlocker
                 'extension' => $extension
             ]);
 
-            $emailReason = 'Blocked extension: .' . $extension;
+            $emailReason = __('email.reason_extension') . ' .' . $extension;
 
             $safeMessage = htmlspecialchars($customMessage, ENT_QUOTES, 'UTF-8');
             $message = str_replace(
@@ -612,24 +612,33 @@ HTML;
      */
     protected function buildEmailBody($user, $ticketNumber, $filename, $reason)
     {
-        $timestamp = date('Y-m-d H:i:s');
-        
+        $timestamp     = date('Y-m-d H:i:s');
+        $labelTitle    = __('email.incident_report_title');
+        $labelIntro    = __('email.incident_report_intro');
+        $labelDetails  = __('email.incident_details');
+        $labelUser     = __('email.user');
+        $labelTicket   = __('email.ticket');
+        $labelFilename = __('email.filename');
+        $labelReason   = __('email.reason');
+        $labelDatetime = __('email.datetime');
+        $labelFooter   = __('email.footer');
+
         return <<<EMAIL
-File Download Incident Report
+{$labelTitle}
 ========================================
 
-A file download attempt was blocked by the Attachment Security module.
+{$labelIntro}
 
-Incident Details:
+{$labelDetails}
 -----------------
-User:           {$user}
-Ticket:         #{$ticketNumber}
-Filename:       {$filename}
-Reason:         {$reason}
-Date/Time:      {$timestamp}
+{$labelUser}    {$user}
+{$labelTicket}  #{$ticketNumber}
+{$labelFilename}{$filename}
+{$labelReason}  {$reason}
+{$labelDatetime}{$timestamp}
 
 ========================================
-This is an automated notification from FreeScout Attachment Security Module.
+{$labelFooter}
 EMAIL;
     }
 
