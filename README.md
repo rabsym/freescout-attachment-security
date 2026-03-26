@@ -1,12 +1,5 @@
 # Attachment Security Module for FreeScout
 
-**Version:** 3.5.0 (Released: March 26, 2026)  
-**Author:** Raimundo Alba  
-**GitHub:** https://github.com/rabsym/freescout-attachment-security  
-**License:** AGPL-3.0
-
-## Overview
-
 The Attachment Security module enhances FreeScout's security by blocking downloads of potentially dangerous file attachments based on their file extensions. It provides flexible configuration options including role-based blocking modes, customizable blocked page, comprehensive logging, and **multi-format archive scanning** (ZIP, RAR, TAR, GZ, BZ2) with automatic detection of supported archive formats to detect malicious files hidden inside compressed archives.
 
 ## Features
@@ -587,36 +580,24 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
 GNU Affero General Public License v3.0 — see the LICENSE file for details.
 
-## Contributing
+## Contributing & Support
 
 Contributions are welcome! If you have ideas for improvements or find any issues:
 
-- **Bug Reports & Suggestions**: Please open an issue on [GitHub Issues](https://github.com/rabsym/freescout-attachment-security/issues)
+- **Bug Reports, Questions & Feature Requests**: [GitHub Issues](https://github.com/rabsym/freescout-attachment-security/issues)
 - **Pull Requests**: Code contributions are appreciated
 - **Documentation**: Help improve the docs
 
 ## Support the Project
 
-If you find this module useful and want to support its development:
-
-**PayPal Donations**: [rabsym@gmail.com](https://www.paypal.com/paypalme/rabsym)
+If you find this module useful and would like to support its development, please feel free to sponsor this project via [GitHub Sponsors](https://github.com/sponsors/rabsym).
 
 Your support helps maintain and improve this project. Thank you! 🙏
 
-## Support
-
-For issues, questions, or feature requests:
-
-1. **GitHub Issues**: https://github.com/rabsym/freescout-attachment-security/issues
-2. **Check documentation** in this README
-3. **Review logs**: `storage/logs/attachmentsecurity.log`
-
 ## Credits
 
-**Developer:** Raimundo Alba  
-**GitHub:** https://github.com/rabsym  
-**Built for:** FreeScout - The free self-hosted help desk & shared mailbox
-
----
+- **Developer**: Raimundo Alba
+- **GitHub**: [@rabsym](https://github.com/rabsym)
+- **Built for**: [FreeScout](https://freescout.net) — The free self-hosted help desk & shared mailbox
 
 ⭐ If you find this module useful, please star it on GitHub!
