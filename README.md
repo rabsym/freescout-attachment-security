@@ -5,6 +5,7 @@ The Attachment Security module enhances FreeScout's security by blocking downloa
 ## Features
 
 ### Core Functionality
+- ✅ **Improved session handling** (v3.6.0): Attempts to download blocked files are now correctly identified in logs and email notifications.
 - ✅ **Internationalization (i18n)** (v3.5.0): Spanish, French, German, Portuguese, Italian and Dutch translations included.
 - ✅ **Extension-based blocking**: Block downloads by file extension (exe, php, js, etc.)
 - ✅ **Block files without extension** (v3.4.0): Optional blocking of extensionless files (readme, makefile, etc.)
@@ -522,6 +523,10 @@ For maximum security:
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
+
+### Version 3.6.0 (2026-04-25)
+- Improved session handling in middleware to ensure correct user identification when blocking attachment downloads. Agents are now properly tracked in logs and email alerts even when the session is not yet initialized at middleware execution time.
+- Internationalization for email notifications.
 
 ### Version 3.5.0 (2026-03-26)
 - Internationalization (i18n) support via JSON translation files

@@ -225,6 +225,26 @@ class AttachmentBlocker
      */
     protected function blockDownload($request, $path, $extension, $blockType = 'regular', $scanResult = null)
     {
+
+        // Decrypt and load the existing session from the cookie
+        // (the guard auth() may not be initialized yet at middleware level)
+        if (!session()->isStarted()) {
+            try {
+                $cookieValue = $request->cookies->get(config('session.cookie'));
+                if ($cookieValue) {
+                    $decryptedId = app('encrypter')->decrypt($cookieValue, false);
+                    // Laravel cookie format: "hash|session_id"
+                    if (str_contains($decryptedId, '|')) {
+                        $decryptedId = explode('|', $decryptedId)[1];
+                    }
+                    session()->setId($decryptedId);
+                }
+            } catch (\Exception $e) {
+                // If decryption fails, proceed with new session
+            }
+            session()->start();
+        }
+
         // Check blocking mode (applies to all block types)
         $blockingMode = Module::getOption('attachmentsecurity', 'blocking_mode', self::MODE_ALL);
         
@@ -239,7 +259,20 @@ class AttachmentBlocker
         }
 
         $filename = pathinfo($path, PATHINFO_BASENAME);
-        $user = auth()->check() ? auth()->user()->email : 'guest';
+
+        $user = 'guest';
+        try {
+            $sessionKey = 'login_web_' . sha1(\Illuminate\Auth\SessionGuard::class);
+            $sessionUserId = session()->get($sessionKey);
+            if ($sessionUserId) {
+                $userObj = \App\User::find($sessionUserId);
+                if ($userObj) {
+                    $user = $userObj->email;
+                }
+            }
+        } catch (\Exception $e) {
+            // Fallback a 'guest'
+        }
 
         // Get ticket number from attachment
         $attachmentId = $request->query('id');

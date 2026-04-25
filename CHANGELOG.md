@@ -1,5 +1,14 @@
 # Changelog - Attachment Security Module
 
+## [3.6.0] - 2026-04-25
+
+### 🐛 Improved User Identification for Blocked Attachment Downloads
+
+- Improved session handling in middleware to ensure correct user identification when blocking attachment downloads. Agents are now properly tracked in logs and email alerts even when the session is not yet initialized at middleware execution time. This fixes an issue introduced by FreeScout's token-based attachment authentication system, where the Laravel session cookie was not being loaded before the middleware executed, causing all blocked attempts to be logged as "guest" instead of the actual agent's email.
+- Internationalization support for email notifications.
+
+---
+
 ## [3.5.0] - 2026-03-26
 
 ### 🌍 Internationalization (i18n)
